@@ -10,83 +10,88 @@ services:
     build:
       context: .
     container_name: beaconprod
+    environment:
+      - ISSUER=http://172.20.10.47:8082/realms/Beacon
+      - JWKS_URL=http://idp:8082/realms/Beacon/protocol/openid-connect/certs
+      - CLIENT_ID=beacon
+      - CLIENT_SECRET=b26ca0f9-1137-4bee-b453-ee51eefbe7ba
     ports:
       - "5050:5050"
-    entrypoint: ['python','-m','beacon']
     volumes:
-      - ./beacon/logs/logs.log:/beacon/logs/logs.log
-      - ./beacon/conf/conf.py:/beacon/conf/conf.py
-      - ./beacon/connections/mongo/conf.py:/beacon/connections/mongo/conf.py
-      - ./beacon/permissions:/beacon/permissions
-      - ./beacon/models:/beacon/models
-      - ./beacon/conf/models:/beacon/conf/models
+      - /var/log/local/apps/beacon/logs.log:/beacon/logs/logs.log:Z
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/conf/conf.py:/beacon/conf/conf.py:Z
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/connections/mongo/conf.py:/beacon/connections/mongo/conf.py:Z
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/permissions:/beacon/permissions:Z
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/auth/idp_providers:/beacon/auth/idp_providers:Z
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/models:/beacon/models:Z
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/conf/models:/beacon/conf/models:Z
+      - /opt/beacon/beacon2-pi-api-isciii/certs/client.pem:/etc/beacon/certs/client.pem:ro,z
+      - /opt/beacon/beacon2-pi-api-isciii/certs/ca.crt:/etc/beacon/certs/ca.crt:ro,z
+      - /opt/beacon/beacon2-pi-api-isciii/certs/beacon_server.crt:/etc/beacon/certs/beacon_server.crt:ro,z
+      - /opt/beacon/beacon2-pi-api-isciii/certs/beacon_server.key:/etc/beacon/certs/beacon_server.key:ro,z
     networks:
       - pub
 
-  admin-ui:
-    restart: always
-    build:
-      context: ./adminui
-    container_name: admin-ui
-    ports:
-      - "3001:3001"
-    entrypoint: ['bash','/home/app/web/start.sh']
-    volumes:
-      - ./beacon:/home/app/web/beacon
-      - ./adminui:/home/app/web
-    networks:
-      - pub
+#  admin-ui:
+#    restart: always
+#    build:
+#      context: ./adminui
+#    image: localhost/admin-ui:prod
+#    container_name: admin-ui
+#    ports:
+#      - "3001:3001"
+#    entrypoint: ['bash','/home/app/web/start.sh']
+#    volumes:
+#      - /opt/beacon/beacon2-pi-api-isciii/beacon:/home/app/web/beacon:Z
+#      - /opt/beacon/beacon2-pi-api-isciii/adminui:/home/app/web:Z
+#    networks:
+#      - pub
   
   idp:
-    #image: quay.io/keycloak/keycloak:12.0.0
-    image: sleighzy/keycloak
+    image: quay.io/keycloak/keycloak:18.0.0
     hostname: idp
     container_name: idp
+    command: 
+      - start-dev
+      - --import-realm
     environment:
-      # - KEYCLOAK_FRONTEND_URL=http://idp:8080/auth
-      # - KEYCLOAK_LOGLEVEL=DEBUG
-      # - ROOT_LOGLEVEL=DEBUG
-      - KEYCLOAK_USER=admin
-      - KEYCLOAK_PASSWORD=secret
-      - DB_USER=admin
-      - DB_PASSWORD=secret
-      - DB_VENDOR=postgres
-      - DB_ADDR=idp-db
-      - DB_PORT=5432
-      - DB_DATABASE=keycloak
-      #- DB_SCHEMA=public
-      - KEYCLOAK_IMPORT=/tmp/beacon-realm.json -Dkeycloak.profile.feature.upload_scripts=enabled -Dkeycloak.profile.feature.token_exchange=enabled -Dkeycloak.profile.feature.admin_fine_grained_authz=enabled
-      - KEYCLOAK_HOSTNAME=localhost
-      #- KC_HOSTNAME_URL=https://beacon-network-test2.ega-archive.org
-      #- KC_HOSTNAME_ADMIN_URL=https://beacon-network-test2.ega-archive.org
-      #- KEYCLOAK_FRONTEND_URL=https://beacon-network-test2.ega-archive.org/auth/
-      #- PROXY_ADDRESS_FORWARDING=true
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=secret
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://idp-db:5432/keycloak
+      - KC_DB_USERNAME=admin
+      - KC_DB_PASSWORD=secret
+      - KC_HTTP_PORT=8082
+      - KC_HOSTNAME_URL=http://172.20.10.47:8082
+      - KC_HOSTNAME_ADMIN_URL=http://172.20.10.47:8082
     volumes:
-      - ./beacon/auth/realms/beacon-realm.json:/tmp/beacon-realm.json
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/auth/realms/beacon-realm.json:/opt/keycloak/data/import/beacon-realm.json:ro,Z
     ports:
-      - "8080:8080"
+      - "8082:8082"
       - "9991:8443"
     networks:
-      - idp-priv 
+      - idp-priv
       - pub
     depends_on:
       - idp-db
 
   idp-db:
-    image: postgres
+    image: postgres:15
     hostname: idp-db
     container_name: idp-db
+    command: postgres -c logging_collector=on -c log_directory=/var/log/postgresql -c log_filename=postgresql.log
     environment:
       - POSTGRES_DB=keycloak
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=secret
+    volumes:
+      - /opt/beacon/beacon2-pi-api-isciii/postgres/data:/var/lib/postgresql/data:Z
+      - /var/log/local/apps/beacon/:/var/log/postgresql:Z
     networks:
       - idp-priv
 
   db:
-    image: mongo:5
-    command: --wiredTigerCacheSizeGB 4
-    #command: --wiredTigerCacheSizeGB 4 --sslMode requireSSL --tlsCertificateKeyFile test-server1.pem --tlsCAFile test-ca.pem
+    image: docker.io/library/mongo:5.0.32
     hostname: mongo
     container_name: mongoprod
     ports:
@@ -96,18 +101,26 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: example
       MONGO_INITDB_DATABASE: beacon
     volumes:
-      - ./beacon/connections/mongo/mongo-init/:/docker-entrypoint-initdb.d/:ro
-      - ./beacon/connections/mongo/data/:/data
-      - ./beacon/connections/mongo/data/db:/data/db
-      - ./beacon/connections/mongo/data/configdb:/data/configdb
-      - ./beacon/connections/mongo/data/caseLevelData:/data/caseLevelData
-      #- ./test-server1.pem:/test-server1.pem
-      #- ./test-ca.pem:/test-ca.pem
-      #- ./test-client.pem:/test-client.pem
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/connections/mongo/mongo-init/:/docker-entrypoint-initdb.d/:ro,Z
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/connections/mongo/data/:/data:Z
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/connections/mongo/data/db:/data/db:Z
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/connections/mongo/data/configdb:/data/configdb:Z
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/connections/mongo/data/caseLevelData:/data/caseLevelData:Z
+      - /opt/beacon/beacon2-pi-api-isciii/beacon/connections/mongo/mongod.conf:/data/mongod.conf:ro,Z
+      - /var/log/local/apps/beacon/mongod.log:/var/log/mongodb/mongod.log:Z
+      - /opt/beacon/beacon2-pi-api-isciii/certs/server.pem:/etc/mongo/certs/server.pem:ro,z 
+      - /opt/beacon/beacon2-pi-api-isciii/certs/ca.crt:/etc/mongo/certs/ca.crt:ro,z
     networks:
       - pub
-    #command: --verbose
-  
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --tls --tlsCertificateKeyFile /etc/mongo/certs/server.pem --tlsCAFile /etc/mongo/certs/ca.crt --tlsAllowInvalidCertificates localhost:27017/test --quiet
+      interval: 300s
+      timeout: 10s
+      retries: 3
+      start_period: 30s 
+   
+    command: ["--config", "/data/mongod.conf", "--tlsMode", "requireTLS", "--tlsCertificateKeyFile", "/etc/mongo/certs/server.pem", "--tlsCAFile", "/etc/mongo/certs/ca.crt", "--tlsAllowInvalidCertificates"]  
+
   mongo-express:
     image: mongo-express
     restart: always
@@ -116,24 +129,38 @@ services:
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: example
-      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/?tls=true&tlsCAFile=/etc/mongo/certs/ca.crt&tlsCertificateKeyFile=/etc/mongo/certs/client.pem&tlsAllowInvalidCertificates=true
+      ME_CONFIG_MONGODB_SSL: "true"
+      ME_CONFIG_MONGODB_SSLVALIDATE: "true"
+      ME_CONFIG_MONGODB_CA_FILE: /etc/mongo/certs/ca.crt
+      ME_CONFIG_MONGODB_TLS: "true"
+      ME_CONFIG_MONGODB_TLS_CA_FILE: /etc/mongo/certs/ca.crt
+      ME_CONFIG_MONGODB_TLS_CERT_KEY_FILE: /etc/mongo/certs/client.pem
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
+    volumes:
+      - /opt/beacon/beacon2-pi-api-isciii/certs:/etc/mongo/certs:ro,z
+    depends_on:
+      - db
     networks:
       - pub
 
   beacon-ri-tools:
-    image: ghcr.io/ega-archive/beacon2-ri-tools-v2:latest
+    image: ghcr.io/ega-archive/beacon2-ri-tools-v2:2.0.6
     hostname: beacon-ri-tools
     container_name: ri-tools
     networks:
       - pub
     tty: true
     volumes:
-      - ./ri-tools/output_docs:/usr/src/app/output_docs
-      - ./ri-tools/conf:/usr/src/app/conf
-      - ./ri-tools/files/vcf/files_to_read:/usr/src/app/files/vcf/files_to_read
-      - ./ri-tools/csv:/usr/src/app/csv
-      - ./ri-tools/pipelines:/usr/src/app/pipelines
-      - ./ri-tools/files/updated_json:/usr/src/app/files/updated_json
+      - /opt/beacon/beacon2-pi-api-isciii/ri-tools/output_docs:/usr/src/app/output_docs:Z
+      - /opt/beacon/beacon2-pi-api-isciii/ri-tools/conf:/usr/src/app/conf:Z
+      - /opt/beacon/beacon2-pi-api-isciii/ri-tools/files/vcf/files_to_read:/usr/src/app/files/vcf/files_to_read:Z
+      - /opt/beacon/beacon2-pi-api-isciii/ri-tools/csv:/usr/src/app/csv:Z
+      - /opt/beacon/beacon2-pi-api-isciii/ri-tools/pipelines:/usr/src/app/pipelines:Z
+      - /opt/beacon/beacon2-pi-api-isciii/ri-tools/files/updated_json:/usr/src/app/files/updated_json:Z
+      - /opt/beacon/beacon2-pi-api-isciii/ri-tools/patches/genomicVariations_vcf.py:/usr/src/app/genomicVariations_vcf.py:ro,z
+      - /opt/beacon/beacon2-pi-api-isciii/certs/ca.crt:/etc/mongo/certs/ca.crt:ro,z
+      - /opt/beacon/beacon2-pi-api-isciii/certs/client.pem:/etc/mongo/certs/client.pem:ro,z
 
   phenopackets-to-BFF:
     image: ghcr.io/ega-archive/phenopackets-to-bff:latest
@@ -141,6 +168,52 @@ services:
     hostname: phenopackets-to-BFF
     container_name: phenopackets-to-BFF
     volumes:
-      - ./ri-tools/phenopackets-to-BFF/:/usr/src/app/examples
+      - /opt/beacon/beacon2-pi-api-isciii/ri-tools/phenopackets-to-BFF/:/usr/src/app/examples:Z
+    networks:
+      - pub
+
+#  templateUI:
+#    image: ghcr.io/ega-archive/beacon-template-ui:main
+#    restart: always
+#    hostname: template-ui
+#    container_name: template-ui
+#    command: node /opt/yarn-v1.22.22/bin/yarn.js start
+#    ports:
+#      - 3000:3000
+#    volumes:
+#      - /opt/beacon/beacon2-pi-api-isciii/template-ui/src/config/config.json:/client/src/config/config.json:Z
+#      - /opt/beacon/beacon2-pi-api-isciii/template-ui/.env:/client/.env:Z
+#    networks:
+#      - pub
+#    environment:
+#      - CHOKIDAR_USEPOLLING=true
+#      - WATCHPACK_POLLING=true
+
+  template-ui:
+    build: ./template-ui/client
+    restart: always
+    hostname: template-ui
+    container_name: template-ui
+    ports:
+      - 3000:3000
+    volumes:
+      - /opt/beacon/beacon2-pi-api-isciii/template-ui/client/src/config/config.json:/client/src/config/config.json:ro,Z
+    networks:
+      - pub
+ 
+  apache-beacon:
+    image: registry.access.redhat.com/ubi9/httpd-24
+    container_name: apache-beacon
+    restart: unless-stopped
+    depends_on:
+      - beaconprod
+      - template-ui
+    ports:
+      - "8443:8080"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /usr/share/zoneinfo:/usr/share/zoneinfo
+      - /opt/beacon/beacon2-pi-api-isciii/conf/beacon_apache_reverse_proxy.conf:/etc/httpd/conf.d/beacon.conf:ro,Z
+      - /var/log/local/apps/beacon/apache:/var/log/httpd:Z
     networks:
       - pub
