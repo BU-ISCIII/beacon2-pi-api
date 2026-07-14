@@ -2,7 +2,7 @@ import yaml
 from beacon.exceptions.exceptions import NoPermissionsAvailable
 from beacon.response.classes import SingleDatasetResponse
 from beacon.permissions.utils import return_found_granularity_in_exceptions, return_granularity_and_exceptions
-
+from beacon.connections.mongo import client, dbname
 
 class Permissions():
     """Base class, just to agree on the interface."""
@@ -67,6 +67,45 @@ class DummyPermissions(Permissions):
             return datasets
         except Exception as e:
             raise NoPermissionsAvailable("Check if datasets_permissions.yml file is not empty of datasets or has any header missing.")
+
+    async def close(self):
+        pass
+
+
+
+class MongoPermissions(Permissions):
+    async def initialize(self):
+        pass
+
+    async def get_permissions(self, username, requested_datasets=None, testMode=False):
+        datasets = []
+        try:
+            datasets_permissions = {
+                doc["_id"]: doc["permissions"]
+                for doc in client[dbname].datasetsPermissions.find({})
+            }
+            if testMode == True:
+                test_datasets = [
+                    d["_id"]
+                    for d in client[dbname].datasetsConf.find(
+                        {"isTest": True}, {"_id": 1}
+                    )
+                ]
+            for dataset, security_level_dict in datasets_permissions.items():
+                if testMode == True:
+                    if dataset not in test_datasets:
+                        continue
+                default_granularity = None
+                granularity_exceptions = None
+                default_granularity, granularity_exceptions = return_granularity_and_exceptions(self, security_level_dict, username, default_granularity, granularity_exceptions)
+                if granularity_exceptions != None:
+                    default_granularity = return_found_granularity_in_exceptions(self, granularity_exceptions, default_granularity)
+                if default_granularity != None:
+                    datasetInstance = SingleDatasetResponse(dataset=dataset, granularity=default_granularity)
+                    datasets.append(datasetInstance)
+            return datasets
+        except Exception as e:
+            raise NoPermissionsAvailable("Check the datasetsPermissions collection is not empty or missing the permissions field.") from e
 
     async def close(self):
         pass

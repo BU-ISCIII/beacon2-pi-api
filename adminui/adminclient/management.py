@@ -4,10 +4,10 @@ from adminclient import models
 from adminclient.models import PermissionsInstance
 from django.contrib.contenttypes.models import ContentType
 
-def add_role_permissions():
-    owner = Group.objects.create(name='Owner')
-    admin = Group.objects.create(name='Admin')
-    foreigner = Group.objects.create(name='Foreigner')
+def add_role_permissions(**kwargs):
+    owner, _ = Group.objects.get_or_create(name='Owner')
+    admin, _ = Group.objects.get_or_create(name='Admin')
+    foreigner, _ = Group.objects.get_or_create(name='Foreigner')
     content_type = ContentType.objects.get_for_model(PermissionsInstance)
     post_permission = Permission.objects.filter(content_type=content_type)
 
@@ -20,4 +20,4 @@ def add_role_permissions():
             owner.permissions.add(perm)
             admin.permissions.add(perm)
 
-add_role_permissions()
+post_migrate.connect(add_role_permissions)
