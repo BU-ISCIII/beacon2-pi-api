@@ -1,15 +1,40 @@
 {
   "beaconType": "singleBeacon",
-  "apiUrl": "http://localhost:5050/api",
-  "assemblyId": ["GRCh38", "GRCh37", "NCBI36"],
+  "apiUrl": "http://beaconaf-isciiiciber.isciiides.es:8443/api",
+  "assemblyId": [
+    "GRCh38",
+    "GRCh37",
+    "NCBI36"
+  ],
   "variationType": [
-    { "jsonName": "SNP", "displayName": "SNP" },
-    { "jsonName": "DEL", "displayName": "DEL" },
-    { "jsonName": "DUP", "displayName": "DUP" },
-    { "jsonName": "INV", "displayName": "INV" },
-    { "jsonName": "INS", "displayName": "INS" },
-    { "jsonName": "CNV", "displayName": "CNV" },
-    { "jsonName": "BND", "displayName": "BND" }
+    {
+      "jsonName": "SNP",
+      "displayName": "SNP"
+    },
+    {
+      "jsonName": "DEL",
+      "displayName": "DEL"
+    },
+    {
+      "jsonName": "DUP",
+      "displayName": "DUP"
+    },
+    {
+      "jsonName": "INV",
+      "displayName": "INV"
+    },
+    {
+      "jsonName": "INS",
+      "displayName": "INS"
+    },
+    {
+      "jsonName": "CNV",
+      "displayName": "CNV"
+    },
+    {
+      "jsonName": "BND",
+      "displayName": "BND"
+    }
   ],
   "ui": {
     "title": "EGA Beacon Browser",
@@ -57,7 +82,6 @@
         }
       ]
     },
-
     "showLogin": false,
     "auth": {
       "providerType": "private",
@@ -80,7 +104,6 @@
       "datasets",
       "runs"
     ],
-
     "commonFilters": {
       "filterCategories": [
         "Demographics",
@@ -94,14 +117,22 @@
             "id": "NCIT:C16576",
             "label": "female",
             "type": "ontology",
-            "scopes": ["individual", "cohort", "individuals"]
+            "scopes": [
+              "individual",
+              "cohort",
+              "individuals"
+            ]
           },
           {
             "key": "male",
             "id": "NCIT:C20197",
             "label": "male",
             "type": "ontology",
-            "scopes": ["individual", "cohort", "individuals"]
+            "scopes": [
+              "individual",
+              "cohort",
+              "individuals"
+            ]
           },
           {
             "key": "weight",
@@ -114,15 +145,18 @@
             "id": "ethnicity",
             "label": "ethnicity",
             "type": "alphanumeric",
-            "scopes": ["individual"]
+            "scopes": [
+              "individual"
+            ]
           },
-
           {
             "key": "Asian or Asian British",
             "id": "NCIT:C41260",
             "label": "Asian or Asian British",
             "type": "ontology",
-            "scopes": ["individual"]
+            "scopes": [
+              "individual"
+            ]
           }
         ],
         "Metabolic Diseases": [
@@ -131,35 +165,45 @@
             "label": "obesity",
             "id": "ICD10:E66",
             "type": "ontology",
-            "scopes": ["individual"]
+            "scopes": [
+              "individual"
+            ]
           },
           {
             "key": "gastro-oesophageal reflux disease",
             "label": "gastro-oesophageal reflux disease",
             "id": "ICD10:K21",
             "type": "ontology",
-            "scopes": ["individual"]
+            "scopes": [
+              "individual"
+            ]
           },
           {
             "key": "insulin-dependent diabetes mellitus",
             "label": "insulin-dependent diabetes mellitus",
             "id": "ICD10:E10",
             "type": "ontology",
-            "scopes": ["individual"]
+            "scopes": [
+              "individual"
+            ]
           },
           {
             "key": "thyroiditis",
             "label": "thyroiditis",
             "id": "ICD10:E06",
             "type": "ontology",
-            "scopes": ["individual"]
+            "scopes": [
+              "individual"
+            ]
           },
           {
             "key": "iron deficiency anaemia",
             "label": "iron deficiency anaemia",
             "id": "ICD10:D50",
             "type": "ontology",
-            "scopes": ["individual"]
+            "scopes": [
+              "individual"
+            ]
           }
         ],
         "Mental Diseases": [
@@ -168,21 +212,27 @@
             "label": "schizophrenia",
             "id": "ICD10:F20",
             "type": "ontology",
-            "scopes": ["individual"]
+            "scopes": [
+              "individual"
+            ]
           },
           {
             "key": "eating disorders",
             "label": "eating disorders",
             "id": "ICD10:F50",
             "type": "ontology",
-            "scopes": ["individual"]
+            "scopes": [
+              "individual"
+            ]
           },
           {
             "key": "bipolar affective disorder",
             "label": "bipolar affective disorder",
             "id": "ICD10:F3181",
             "type": "ontology",
-            "scopes": ["individual"]
+            "scopes": [
+              "individual"
+            ]
           }
         ]
       }
@@ -195,7 +245,6 @@
         "Molecular Effect"
       ]
     },
-
     "genomicQueries": {
       "genomicQueryTypes": {
         "sequenceQuery": true,

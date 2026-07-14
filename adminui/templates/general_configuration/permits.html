@@ -10,6 +10,47 @@
   <title>Admin UI</title>
   <script type="text/javascript" src="{% static '/adminui/js/htmx.min.js' %}"></script>
   <link rel="stylesheet" href="media/mystyle.css">
+
+  <style>
+    .segmented-radio {
+      display: flex;
+      width: 530px;
+      border: 1px solid #000;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 0.4rem 0 1rem 0;
+      background: #fff;
+    }
+
+    .segmented-option {
+      flex: 1;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .segmented-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .segmented-option span {
+      display: block;
+      width: 100%;
+      padding: 0.15rem 0.5rem;
+      color: #000;
+      background: #fff;
+      border-radius: 999px;
+    }
+
+    .segmented-option input[type="radio"]:checked + span {
+      color: #fff;
+      background: #000;
+    }
+  </style>
 </head>
 
 <body>
@@ -24,14 +65,31 @@
           {% csrf_token %}
             <div>
               {% for f in form %}
-              {% if f.help_text != 'DatasetId' %}
-              {% if f.errors %}
-              <p>{{f.help_text|safe}} {{f}} {{f.errors|escape}}</p>
-              {% else %}
-              <p>{{f.help_text|safe}} {{f}} </p>
-              {% endif %}
+                {% if f.help_text != 'DatasetId' %}
 
-              {% endif %}
+                  {% if f.name == 'granularity' or f.name == 'SecurityLevel' %}
+                    <p>{{ f.help_text|safe }}</p>
+                    <div class="segmented-radio">
+                      {% for radio in f %}
+                        <label class="segmented-option">
+                          {{ radio.tag }}
+                          <span>{{ radio.choice_label }}</span>
+                        </label>
+                      {% endfor %}
+                    </div>
+                    {% if f.errors %}
+                      <p>{{ f.errors|escape }}</p>
+                    {% endif %}
+
+                  {% else %}
+                    {% if f.errors %}
+                      <p>{{ f.help_text|safe }} {{ f }} {{ f.errors|escape }}</p>
+                    {% else %}
+                      <p>{{ f.help_text|safe }} {{ f }}</p>
+                    {% endif %}
+                  {% endif %}
+
+                {% endif %}
               {% endfor %}
               <span id="active-label"></span>
             </div>
@@ -39,7 +97,6 @@
               <button type="submit" class="btn btn-danger mb-3" name="Save" value="Save">Save Dataset Changes</button>
             </div>
         </form>
-
 
       {% for k, v in dataset.items %}
         {% if k == 'security_level' %}

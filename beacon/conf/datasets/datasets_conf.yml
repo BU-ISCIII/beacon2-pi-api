@@ -1,11 +1,25 @@
 CINECA_synthetic_cohort_EUROPE_UK1:
   isTest: false
-test:
-  isSynthetic: true
-  isTest: true
-test2:
-  isSynthetic: true
-  isTest: true
 DemoDatasetBreast:
   isSynthetic: true
+  isTest: false
+GoE_FI_CSC_1:
+  isTest: false
+ISCIII_ES_WGSTRIO_1:
   isTest: true
+ISCIII_ES_WGSTRIO_2:
+  isTest: true
+ISCIII_ES_WGSTRIO_3:
+  isTest: true
+TEST_01:
+  isSynthetic: false
+  isTest: false
+TEST_REMOTE_01:
+  isSynthetic: false
+  isTest: false
+Test_22_06:
+  isSynthetic: false
+  isTest: false
+test2:
+  isSynthetic: true
+  isTest: false

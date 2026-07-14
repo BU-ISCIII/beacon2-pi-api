@@ -19,8 +19,8 @@ sh.setLevel('NOTSET')
 sh.setFormatter(formatter)
 LOG.addHandler(sh)
 
-@login_required
-@permission_required('adminclient.can_see_view', raise_exception=True)
+#@login_required
+#@permission_required('adminclient.can_see_view', raise_exception=True)
 def default_view(request):
     analyses=client["beacon"].analyses
     datasets=client["beacon"].datasets
@@ -38,7 +38,7 @@ def default_view(request):
         dataset_dict={}
         dataset_dict["name"]=dataset["name"]
         dataset_dict["id"]=dataset["id"]
-        dataset_dict["description"]=dataset["description"]
+        dataset_dict["description"]=dataset.get("description", "")
         total_ids=biosamples.find({"datasetId": dataset["id"]})
         total_ids=list(total_ids)
         dataset_dict["Total_IDs"]=len(total_ids)

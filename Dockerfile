@@ -7,7 +7,7 @@ FROM python:3.10-bullseye AS BUILD
 ENV DEBIAN_FRONTEND noninteractive
 
 # Install dependences
-RUN apt-get update 
+RUN apt-get update
 #RUN apt-get upgrade -y
 RUN apt-get install -y --no-install-recommends \
     ca-certificates pkg-config make gcc \

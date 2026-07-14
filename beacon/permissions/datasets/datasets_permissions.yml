@@ -1,54 +1,24 @@
-AV_Dataset:
-  controlled:
-    user-list:
-    - default_entry_types_granularity: count
-      entry_types_exceptions:
-      - individual: record
-      user_e-mail: jane.smith@beacon.ga4gh
-CINECA_synthetic_cohort_EUROPE_UK1:
-  public:
+GoE_FI_CSC_1:
+  registered:
     default_entry_types_granularity: record
-    entry_types_exceptions:
-    - cohort: boolean
-DemoDatasetBreast:
-  controlled:
-    user-list:
-    - default_entry_types_granularity: count
-      entry_types_exceptions:
-      - individual: record
-      user_e-mail: jane.smith@beacon.ga4gh
-    - user_e-mail: john.doe@beacon.ga4gh
-  public:
+ISCIII_ES_WGSTRIO_1:
+  registered:
+    default_entry_types_granularity: boolean
+ISCIII_ES_WGSTRIO_2:
+  registered:
     default_entry_types_granularity: record
-    entry_types_exceptions:
-    - individual: record
-test:
-  controlled:
-    user-list:
-    - default_entry_types_granularity: count
-      entry_types_exceptions:
-      - individual: record
-      user_e-mail: jane.smith@beacon.ga4gh
-    - user_e-mail: john.doe@beacon.ga4gh
+ISCIII_ES_WGSTRIO_3:
   public:
-    default_entry_types_granularity: record
-    entry_types_exceptions:
-    - individual: record
-test2:
-  controlled:
+    default_entry_types_granularity: boolean
     user-list:
-    - default_entry_types_granularity: count
-      entry_types_exceptions:
-      - individual: record
-      - biosample: count
-      - analysis: boolean
+    - default_entry_types_granularity: record
       user_e-mail: jane.smith@beacon.ga4gh
-    - user_e-mail: john.doe@beacon.ga4gh
-  public:
-    default_entry_types_granularity: record
-    entry_types_exceptions:
-    - individual: record
+TEST_01:
   registered:
     default_entry_types_granularity: count
-    entry_types_exceptions:
-    - cohort: boolean
+TEST_REMOTE_01:
+  public:
+    default_entry_types_granularity: count
+Test_22_06:
+  public:
+    default_entry_types_granularity: boolean
