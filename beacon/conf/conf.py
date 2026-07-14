@@ -9,24 +9,24 @@ except Exception as e:
     raise FileNotFound('There are issues with the api_version.yml file. Check if it can be opened or if has any content')
 
 level=logging.DEBUG
-log_file=None
-beacon_id = 'org.ega-archive.beacon-ri-demo'  # ID of the Beacon
-beacon_name = 'Beacon Production Implementation demo'  # Name of the Beacon service
+log_file = '/beacon/logs/beacon.log'
+beacon_id = 'es.isciii-ciber.beacon'
+beacon_name = 'ISCIII-CIBER Spain AF Beacon'
 api_version = 'v2.2.0' # Version of the Beacon implementation
-uri = 'http://localhost:5050'
+uri = 'http://beaconprod:5050'
 uri_subpath = '/api'
 complete_url = uri + uri_subpath
-environment = 'test'
+environment = 'TEST'
 description = r"This Beacon is based on synthetic data hosted at the <a href='https://ega-archive.org/datasets/EGAD00001003338'>EGA</a>. The dataset contains 2504 samples including genetic data based on 1K Genomes data, and 76 individual attributes and phenotypic data derived from UKBiobank."
 version = api_version_yaml['api_version']
-welcome_url = 'https://beacon.ega-archive.org/'
-alternative_url = 'https://beacon.ega-archive.org/api'
-create_datetime = '2021-11-29T12:00:00.000000Z'
+welcome_url = 'https://isciii.es/'
+alternative_url = 'http://beaconaf-isciiiciber.isciiides.es:8443'
+create_datetime = '2026-02-11T00:00:00.000000Z'
 update_datetime = ''
 default_beacon_granularity = "record" # boolean, count or record
 security_levels = ['PUBLIC', 'REGISTERED', 'CONTROLLED']
 documentation_url = 'https://b2ri-documentation-demo.ega-archive.org/'
-cors_urls = ["http://localhost:3003", "http://localhost:3000"]
+cors_urls = ['http://localhost:3003', 'http://localhost:3000', 'http://beaconaf-isciiiciber.isciiides.es:8443', 'http://apibeacon-isciiiciber.isciiides.es:8443']
 max_limit_of_records_per_dataset_in_a_page=100
 pending_requests_timeout_in_seconds=10 # Timeout waiting pending requests
 
@@ -36,13 +36,13 @@ ga4gh_service_type_artifact = 'beacon'
 ga4gh_service_type_version = '1.0'
 
 # Organization info
-org_id = 'EGA'  # Id of the organization
-org_name = 'European Genome-Phenome Archive (EGA)'  # Full name
-org_description = 'The European Genome-phenome Archive (EGA) is a service for permanent archiving and sharing of all types of personally identifiable genetic and phenotypic data resulting from biomedical research projects.'
-org_adress = 'C/ Dr. Aiguader, 88, PRBB Building 08003 Barcelona, Spain'
-org_welcome_url = 'https://ega-archive.org/'
-org_contact_url = 'mailto:beacon.ega@crg.eu'
-org_logo_url = 'https://legacy.ega-archive.org/images/logo.png'
+org_id = 'ISCIII'
+org_name = 'Instituto de Salud Carlos III'
+org_description = 'El Instituto de Salud Carlos III es el principal organismo público de investigación biomédica y en salud de España.'
+org_adress = 'C/ Monforte de Lemos, 5, 28029 Madrid, Spain'
+org_welcome_url = 'https://www.isciii.es/'
+org_contact_url = 'mailto:bioinformatica@isciii.es'
+org_logo_url = 'https://www.isciii.es/images/logo.png'
 org_info = ''
 
 # Certificates

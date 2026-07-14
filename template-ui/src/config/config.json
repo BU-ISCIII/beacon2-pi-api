@@ -1,6 +1,6 @@
 {
   "beaconType": "singleBeacon",
-  "apiUrl": "http://localhost:5050/api",
+  "apiUrl": "http://beaconaf-isciiiciber.isciiides.es:8443/api",
   "assemblyId": ["GRCh38", "GRCh37", "NCBI36"],
   "variationType": [
     { "jsonName": "SNP", "displayName": "SNP" },

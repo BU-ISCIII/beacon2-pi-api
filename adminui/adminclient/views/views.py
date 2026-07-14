@@ -19,7 +19,7 @@ sh.setFormatter(formatter)
 LOG.addHandler(sh)
 
 @login_required
-@permission_required('adminclient.can_see_view', raise_exception=True)
+#@permission_required('adminclient.can_see_view', raise_exception=True)
 def default_view(request):
     form =BamForm()
     context = {'form': form}
@@ -38,6 +38,7 @@ def default_view(request):
             org_logo_url = form.cleaned_data['OrgLogoUrl']
             granularity = form.cleaned_data['granularity']
             security_level = form.cleaned_data['SecurityLevel']
+            security_level = [level.upper() for level in security_level]
             with open("/home/app/web/beacon/conf/conf.py") as f:
                 lines = f.readlines()
             with open("/home/app/web/beacon/conf/conf.py", "w") as f:
@@ -77,7 +78,7 @@ def default_view(request):
     return render(request, template, context)
 
 @login_required
-@permission_required('adminclient.can_see_view', raise_exception=True)
+#@permission_required('adminclient.can_see_view', raise_exception=True)
 def entry_types(request):
     form =EntryTypesForm()
     context = {'form': form}

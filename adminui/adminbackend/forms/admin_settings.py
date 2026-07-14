@@ -33,8 +33,9 @@ class AdminForm(forms.Form):
         super(AdminForm, self).__init__(*args, **kwargs)
         # assign a (computed, I assume) default value to the choice field
         self.fields['Email'].widget.attrs['readonly'] = True
+
+        groups = Group.objects.all()
+        self.fields['Groups'].choices = [(group.name, group.name) for group in groups]
          
     Email = forms.EmailField()
-    groups = Group.objects.all()
-    groups_choices=[(group.name,group.name) for group in groups]
-    Groups = forms.ChoiceField(choices=groups_choices)
+    Groups = forms.ChoiceField(choices=[])

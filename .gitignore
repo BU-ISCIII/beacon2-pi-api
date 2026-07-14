@@ -14,3 +14,8 @@ adminui/adminclient/migrations/*
 adminui/node_modules
 *.vcf.bgz
 beacon/conf/conf.py
+# Local certificates and persistent container data
+certs/
+beacon/connections/mongo/data/db/
+beacon/connections/mongo/data/configdb/
+postgres/data/
