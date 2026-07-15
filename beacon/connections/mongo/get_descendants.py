@@ -4,7 +4,7 @@ import os
 import urllib.request
 from urllib.error import HTTPError
 import progressbar
-from beacon.connections.mongo.__init__ import client, dbname, filtering_terms
+from beacon.connections.mongo.client import get_client
 
 class MyProgressBar:
     def __init__(self):
@@ -33,25 +33,22 @@ def load_ontology(ontology_id: str):
                 print(full_path)
                 urllib.request.urlretrieve(url, path, MyProgressBar())
         except HTTPError:
-            # TODO: Handle error
-            #print("ERROR", HTTPError)
+            # TODO: Handle error in case the HTTP address could not be reached.
             pass
         except ValueError:
-            #print("ERROR", ValueError)
+            # TODO: Handle error in case there was a wrong ontology trying to be mapped.
             pass
         except Exception:
             pass
         try:
-            #print (os.stat(path).st_size)
             if os.stat(path).st_size == 0:
                 try:
                     urllib.request.urlretrieve(url_alt, path, MyProgressBar())
                 except HTTPError:
-                    # TODO: Handle error
-                    #print("ERROR", HTTPError)
+                    # TODO: Handle error in case the HTTP address could not be reached.
                     pass
                 except ValueError:
-                    #print("ERROR", ValueError)
+                    # TODO: Handle error in case there was a wrong ontology trying to be mapped.
                     pass
         except Exception:
                 pass
@@ -59,15 +56,16 @@ def load_ontology(ontology_id: str):
 
 
 def get_descendants_and_similarities():
+    client=get_client()
     try:
-        client[dbname].drop_collection("similarities")
+        client['beacon'].drop_collection("similarities")
     except Exception:
-        client[dbname].create_collection(name="similarities")
+        client['beacon'].create_collection(name="similarities")
     try:
-        client[dbname].validate_collection("similarities")
+        client['beacon'].validate_collection("similarities")
     except Exception:
-        db=client[dbname].create_collection(name="similarities")
-    filtering_docs=client[dbname].filtering_terms.find({"type": "ontology"})
+        db=client['beacon'].create_collection(name="similarities")
+    filtering_docs=client['beacon'].filtering_terms.find({"type": "ontology"})
     array_of_ontologies=[]
     for ft_doc in filtering_docs:
         if ft_doc["id"] not in array_of_ontologies:
@@ -140,7 +138,7 @@ def get_descendants_and_similarities():
         dict['similarity_medium']=similarity_medium
         dict['similarity_low']=similarity_low
         
-        client[dbname].similarities.insert_one(dict)
+        client['beacon'].similarities.insert_one(dict)
         print("succesfully retrieved descendants from {}".format(ontology))
         
     

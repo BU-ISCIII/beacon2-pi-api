@@ -1,7 +1,7 @@
 from pymongo.cursor import Cursor
-from beacon.connections.mongo.__init__ import client, counts as counts_, filtering_terms
+from beacon.connections.mongo.client import get_client
 from pymongo.collection import Collection
-from beacon.logs.logs import log_with_args_mongo, LOG
+from beacon.logs.logs import log_with_args_mongo
 from beacon.conf.conf_override import config
 from beacon.exceptions.exceptions import InvalidRequest
 import aiohttp.web as web
@@ -15,13 +15,17 @@ def query_id(self, query: dict, document_id) -> dict:
     return query
 
 @log_with_args_mongo(config.level)
+def query_variantInternalId(self, query: dict, document_id) -> dict:
+    query["_id"] = document_id
+    return query
+
+@log_with_args_mongo(config.level)
 def query_patientId(self, query: dict, document_id) -> dict:
     query["patientId"] = document_id
     return query
 
 @log_with_args_mongo(config.level)
 def join_query(self, mongo_collection, query: dict, original_id, dataset: str):
-    #LOG.debug(query)
     excluding_fields={"_id": 0, original_id: 1}
     if dataset != None:
         try:
@@ -41,6 +45,8 @@ def get_documents_for_cohorts(self, collection: Collection, query: dict, skip: i
 
 @log_with_args_mongo(config.level)
 def get_count(self, collection: Collection, query: dict) -> int:
+    client=get_client()
+    counts_=client['beacon'].counts
     if not query:
         return collection.estimated_document_count()
     else:
@@ -136,12 +142,13 @@ def get_docs_by_response_type(self, include: str, query: dict, dataset: SingleDa
 
 @log_with_args_mongo(config.level)
 def get_filtering_documents(self, collection: Collection, query: dict, remove_id: dict,skip: int, limit: int) -> Cursor:
-    ##LOG.debug("FINAL QUERY: {}".format(query))
     # Get the docs by removing the unwanted id
     return collection.find(query,remove_id).skip(skip).limit(limit).max_time_ms(100 * 1000)
 
 @log_with_args_mongo(config.level)
 def choose_scope(self, scope, filter):
+    client=get_client()
+    filtering_terms=client['beacon'].filtering_terms
     # Initiate the dictionaries and create the syntax to query the filtering terms database to get the available scopes
     query_filtering={}
     query_filtering['$and']=[]

@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Optional
 from pydantic import (
     BaseModel,
     model_validator,
@@ -7,7 +7,6 @@ from pydantic import (
 )
 from beacon.conf import conf_override
 from beacon.utils.modules import load_class, get_modules_confiles
-from beacon.logs.logs import LOG
 
 class RelatedEndpoint(BaseModel):
     returnedEntryType: str
@@ -75,23 +74,25 @@ class EndpointEntries(EndpointEntries):
         return values
 
 class MapSchema(BaseModel):
-    schema: str = Field(alias="$schema", default="https://raw.githubusercontent.com/ga4gh-beacon/beacon-framework-v2/main/configuration/beaconConfigurationSchema.json")
+    schema: str = Field(alias="$schema", default="https://raw.githubusercontent.com/ga4gh-beacon/beacon-framework-v2/main/configuration/beaconMapSchema.json")
     endpointSets: EndpointEntries
     def populate_endpoints(self):
         # Load all_modules and do a loop per populating EndpointEntries(loaded_module=Endpoint...) and loading the variables _lookup = True by name, getting endpoint_names per each lookup = True.
         fields={}
         
         for module in list_of_modules:
-            relatedEndpointEntries_values_to_set={}
             for entry_type, set_of_params in module.items():
-                values_to_set = {}
+                relatedEndpointEntries_values_to_set={}
                 if set_of_params["entry_type_enabled"] == True:
-                    values_to_set["returnedEntryType"] = entry_type
                     for lookup_entry_type, lookup_set_of_params in set_of_params["lookups"].items():
+                        values_to_set = {}
                         try:
                             values_to_set["url"] = conf_override.config.complete_url+'/'+lookup_set_of_params["endpoint_name"] if lookup_set_of_params["endpoint_enabled"] == True else None
+                            if values_to_set["url"]==None:
+                                continue
                         except Exception:
                             continue
+                        values_to_set["returnedEntryType"] = lookup_entry_type
                         relatedEndpointEntries_values_to_set[lookup_entry_type]=values_to_set
                 if relatedEndpointEntries_values_to_set != {}:
                     Endpoints = RelatedEndpointEntries(**relatedEndpointEntries_values_to_set)
