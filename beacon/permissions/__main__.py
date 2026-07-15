@@ -2,7 +2,6 @@
 from typing import Optional
 from aiohttp import web
 from .plugins import DummyPermissions as PermissionsProxy
-from beacon.logs.logs import LOG
 from beacon.auth.__main__ import authentication
 from beacon.logs.logs import log_with_args
 from beacon.conf.conf_override import config
@@ -15,13 +14,13 @@ from beacon.exceptions.exceptions import InvalidRequest, NoPermissionsAvailable
 @log_with_args(config.level)
 async def authorization(self):
     try:
-        # Get the token from the headeer Authorization
+        # Get the token from the header Authorization
         auth = RequestAttributes.headers.get('Authorization')
         if not auth or not auth.lower().startswith('bearer '):
             raise NoPermissionsAvailable('request received did not add a token or token did not start with bearer')
         # Initialize the list that will contain the datasets permissions that come from a visa.
         list_visa_datasets=[]
-        access_token = auth[7:].strip() # 7 = len('Bearer ')
+        access_token = auth[7:].strip() # the number 7 is the length of executing len('Bearer ')
         # Validate the token
         user, list_visa_datasets = await authentication(self, access_token)
         # Get the token's email as the username if the token is valid.
