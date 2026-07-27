@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.views.generic import TemplateView
 from django.http import HttpResponseRedirect, HttpResponseBadRequest
 import logging
+import yaml
 from pymongo.mongo_client import MongoClient
 from django.urls import resolve
 from adminbackend.forms.beacon import BamForm
@@ -17,6 +18,137 @@ sh = logging.StreamHandler()
 sh.setLevel('NOTSET')
 sh.setFormatter(formatter)
 LOG.addHandler(sh)
+
+ENTRY_TYPES_CONFIG_PATH = (
+    "/home/app/web/beacon/models/ga4gh/"
+    "beacon_v2_default_model/conf/entry_types"
+)
+
+
+def _entry_type_config_path(entry_type):
+    return f"{ENTRY_TYPES_CONFIG_PATH}/{entry_type}.yml"
+
+
+def _load_entry_type_document(entry_type):
+    with open(
+        _entry_type_config_path(entry_type),
+        "r",
+        encoding="utf-8",
+    ) as config_file:
+        return yaml.safe_load(config_file)
+
+
+def _save_entry_type_document(entry_type, document):
+    with open(
+        _entry_type_config_path(entry_type),
+        "w",
+        encoding="utf-8",
+    ) as config_file:
+        yaml.safe_dump(
+            document,
+            config_file,
+            sort_keys=False,
+            allow_unicode=True,
+        )
+
+
+def _parse_config_value(raw_value):
+    value = raw_value.strip()
+
+    if value == "True":
+        return True
+    if value == "False":
+        return False
+    if value == "None":
+        return None
+
+    return value.strip('"').strip("'")
+
+
+class EntryTypeConfigFile:
+    """Expose YAML configuration using the legacy line-based interface."""
+
+    def __init__(self, entry_type, mode="r"):
+        self.entry_type = entry_type
+        self.mode = mode
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
+
+    def close(self):
+        pass
+
+    def readlines(self):
+        document = _load_entry_type_document(self.entry_type)
+        config = document[self.entry_type]
+
+        lines = [
+            f'endpoint_name="{config["endpoint_name"]}"\n',
+            (
+                "allow_queries_without_filters="
+                f'{config["allow_queries_without_filters"]}\n'
+            ),
+            f'singleEntryUrl={config["allow_id_query"]}\n',
+        ]
+
+        for lookup_name, lookup_config in config["lookups"].items():
+            lines.append(
+                f'{lookup_name}_lookup='
+                f'{lookup_config["endpoint_enabled"]}\n'
+            )
+
+        lines.extend(
+            [
+                f'granularity="{config["max_granularity"]}"\n',
+                f'database="{config["connection"]["name"]}"\n',
+            ]
+        )
+
+        return lines
+
+    def write(self, content):
+        document = _load_entry_type_document(self.entry_type)
+        config = document[self.entry_type]
+
+        for line in content.splitlines():
+            if "=" not in line:
+                continue
+
+            key, raw_value = line.split("=", 1)
+            value = _parse_config_value(raw_value)
+
+            if key == "endpoint_name":
+                config["endpoint_name"] = value
+            elif key == "allow_queries_without_filters":
+                config["allow_queries_without_filters"] = bool(value)
+            elif key == "singleEntryUrl":
+                config["allow_id_query"] = bool(value)
+            elif key == "granularity":
+                config["max_granularity"] = value
+            elif key == "database":
+                config["connection"]["name"] = value
+            elif key.endswith("_lookup"):
+                lookup_name = key.removesuffix("_lookup")
+                if lookup_name in config["lookups"]:
+                    config["lookups"][lookup_name][
+                        "endpoint_enabled"
+                    ] = bool(value)
+
+        _save_entry_type_document(self.entry_type, document)
+
+
+def _open_entry_type_config(entry_type, mode="r"):
+    return EntryTypeConfigFile(entry_type, mode)
+
+
+def _set_entry_type_enabled(entry_type, enabled):
+    document = _load_entry_type_document(entry_type)
+    document[entry_type]["entry_type_enabled"] = bool(enabled)
+    _save_entry_type_document(entry_type, document)
+
 
 @login_required
 #@permission_required('adminclient.can_see_view', raise_exception=True)
@@ -92,33 +224,44 @@ def entry_types(request):
             biosample=form.cleaned_data['Biosample']
             biosample_endpoint_name = form.cleaned_data['BiosampleEndpointName']
             biosample_granularity = form.cleaned_data['biosample_granularity']
-            biosample_engine = form.cleaned_data['analysis_engine']
+            biosample_engine = form.cleaned_data['biosample_engine']
             cohort=form.cleaned_data['Cohort']
             cohort_endpoint_name = form.cleaned_data['CohortEndpointName']
             cohort_granularity = form.cleaned_data['cohort_granularity']
-            cohort_engine = form.cleaned_data['analysis_engine']
+            cohort_engine = form.cleaned_data['cohort_engine']
             dataset=form.cleaned_data['Dataset']
             dataset_endpoint_name = form.cleaned_data['DatasetEndpointName']
             dataset_granularity = form.cleaned_data['dataset_granularity']
-            dataset_engine = form.cleaned_data['analysis_engine']
+            dataset_engine = form.cleaned_data['dataset_engine']
             genomicVariant=form.cleaned_data['GenomicVariant']
             genomicVariant_endpoint_name = form.cleaned_data['GenomicVariantEndpointName']
             genomicVariation_granularity = form.cleaned_data['genomicVariation_granularity']
-            genomicVariation_engine = form.cleaned_data['analysis_engine']
+            genomicVariation_engine = form.cleaned_data['genomicVariation_engine']
             individual=form.cleaned_data['Individual']
             individual_endpoint_name = form.cleaned_data['IndividualEndpointName']
             individual_granularity = form.cleaned_data['individual_granularity']
-            individual_engine = form.cleaned_data['analysis_engine']
+            individual_engine = form.cleaned_data['individual_engine']
             run=form.cleaned_data['Run']
             run_endpoint_name = form.cleaned_data['RunEndpointName']
             run_granularity = form.cleaned_data['run_granularity']
-            run_engine = form.cleaned_data['analysis_engine']
+            run_engine = form.cleaned_data['run_engine']
+
+            _set_entry_type_enabled("analysis", bool(analysis))
+            _set_entry_type_enabled("biosample", bool(biosample))
+            _set_entry_type_enabled("cohort", bool(cohort))
+            _set_entry_type_enabled("dataset", bool(dataset))
+            _set_entry_type_enabled(
+                "genomicVariant",
+                bool(genomicVariant),
+            )
+            _set_entry_type_enabled("individual", bool(individual))
+            _set_entry_type_enabled("run", bool(run))
             if analysis != None:
                 analysis_endpoints=form.cleaned_data['AnalysisEndpoints']
                 analysis_non_filtered = form.cleaned_data['AnalysisNonFiltered']
-                with open("/home/app/web/beacon/conf/" + 'analysis' + ".py") as f:
+                with _open_entry_type_config("analysis") as f:
                     lines = f.readlines()
-                with open("/home/app/web/beacon/conf/"+ 'analysis' + ".py", "w") as f:
+                with _open_entry_type_config("analysis", "w") as f:
                     new_lines =''
                     for line in lines:
                         if 'endpoint_name=' in str(line):
@@ -239,9 +382,9 @@ def entry_types(request):
             if biosample != None:
                 biosample_endpoints=form.cleaned_data['BiosampleEndpoints']
                 biosample_non_filtered = form.cleaned_data['BiosampleNonFiltered']
-                with open("/home/app/web/beacon/conf/" + 'biosample' + ".py") as f:
+                with _open_entry_type_config("biosample") as f:
                     lines = f.readlines()
-                with open("/home/app/web/beacon/conf/"+ 'biosample' + ".py", "w") as f:
+                with _open_entry_type_config("biosample", "w") as f:
                     new_lines =''
                     for line in lines:
                         if 'endpoint_name=' in str(line):
@@ -362,9 +505,9 @@ def entry_types(request):
             if cohort != None:
                 cohort_endpoints=form.cleaned_data['CohortEndpoints']
                 cohort_non_filtered = form.cleaned_data['CohortNonFiltered']
-                with open("/home/app/web/beacon/conf/" + 'cohort' + ".py") as f:
+                with _open_entry_type_config("cohort") as f:
                     lines = f.readlines()
-                with open("/home/app/web/beacon/conf/"+ 'cohort' + ".py", "w") as f:
+                with _open_entry_type_config("cohort", "w") as f:
                     new_lines =''
                     for line in lines:
                         if 'endpoint_name=' in str(line):
@@ -485,9 +628,9 @@ def entry_types(request):
             if dataset != None:
                 dataset_endpoints=form.cleaned_data['DatasetEndpoints']
                 dataset_non_filtered = form.cleaned_data['DatasetNonFiltered']
-                with open("/home/app/web/beacon/conf/" + 'dataset' + ".py") as f:
+                with _open_entry_type_config("dataset") as f:
                     lines = f.readlines()
-                with open("/home/app/web/beacon/conf/"+ 'dataset' + ".py", "w") as f:
+                with _open_entry_type_config("dataset", "w") as f:
                     new_lines =''
                     for line in lines:
                         if 'endpoint_name=' in str(line):
@@ -608,9 +751,9 @@ def entry_types(request):
             if genomicVariant != None:
                 genomicVariant_endpoints=form.cleaned_data['GenomicVariantEndpoints']
                 genomicVariant_non_filtered = form.cleaned_data['GenomicVariantNonFiltered']
-                with open("/home/app/web/beacon/conf/" + 'genomicVariant' + ".py") as f:
+                with _open_entry_type_config("genomicVariant") as f:
                     lines = f.readlines()
-                with open("/home/app/web/beacon/conf/"+ 'genomicVariant' + ".py", "w") as f:
+                with _open_entry_type_config("genomicVariant", "w") as f:
                     new_lines =''
                     for line in lines:
                         if 'endpoint_name=' in str(line):
@@ -731,9 +874,9 @@ def entry_types(request):
             if individual != None:
                 individual_endpoints=form.cleaned_data['IndividualEndpoints']
                 individual_non_filtered = form.cleaned_data['IndividualNonFiltered']
-                with open("/home/app/web/beacon/conf/" + 'individual' + ".py") as f:
+                with _open_entry_type_config("individual") as f:
                     lines = f.readlines()
-                with open("/home/app/web/beacon/conf/"+ 'individual' + ".py", "w") as f:
+                with _open_entry_type_config("individual", "w") as f:
                     new_lines =''
                     for line in lines:
                         if 'endpoint_name=' in str(line):
@@ -854,9 +997,9 @@ def entry_types(request):
             if run != None:
                 run_endpoints=form.cleaned_data['RunEndpoints']
                 run_non_filtered = form.cleaned_data['RunNonFiltered']
-                with open("/home/app/web/beacon/conf/" + 'run' + ".py") as f:
+                with _open_entry_type_config("run") as f:
                     lines = f.readlines()
-                with open("/home/app/web/beacon/conf/"+ 'run' + ".py", "w") as f:
+                with _open_entry_type_config("run", "w") as f:
                     new_lines =''
                     for line in lines:
                         if 'endpoint_name=' in str(line):

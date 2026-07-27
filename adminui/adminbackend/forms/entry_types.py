@@ -74,9 +74,7 @@ class EntryTypesForm(forms.Form):
         if analysis_endpoint_name != '':
             entry_types.append('analysis')
             endpoint_names.append(analysis_endpoint_name)
-            self.initial['Analysis'] = True
-        else:
-            self.initial['Analysis'] = None
+        self.initial['Analysis'] = conf['entry_type_enabled']
         if conf['allow_queries_without_filters'] == False:
             self.initial['AnalysisNonFiltered'] = None
         else:
@@ -93,9 +91,7 @@ class EntryTypesForm(forms.Form):
         if biosample_endpoint_name != '':
             entry_types.append('biosample')
             endpoint_names.append(biosample_endpoint_name)
-            self.initial['Biosample'] = True
-        else:
-            self.initial['Biosample'] = None
+        self.initial['Biosample'] = conf['entry_type_enabled']
         if conf['allow_queries_without_filters'] == False:
             self.initial['BiosampleNonFiltered'] = None
         else:
@@ -112,9 +108,7 @@ class EntryTypesForm(forms.Form):
         if cohort_endpoint_name != '':
             entry_types.append('cohort')
             endpoint_names.append(cohort_endpoint_name)
-            self.initial['Cohort'] = True
-        else:
-            self.initial['Cohort'] = None
+        self.initial['Cohort'] = conf['entry_type_enabled']
         if conf['allow_queries_without_filters'] == False:
             self.initial['CohortNonFiltered'] = None
         else:
@@ -131,9 +125,7 @@ class EntryTypesForm(forms.Form):
         if dataset_endpoint_name != '':
             entry_types.append('dataset')
             endpoint_names.append(dataset_endpoint_name)
-            self.initial['Dataset'] = True
-        else:
-            self.initial['Dataset'] = None
+        self.initial['Dataset'] = conf['entry_type_enabled']
         if conf['allow_queries_without_filters'] == False:
             self.initial['DatasetNonFiltered'] = None
         else:
@@ -150,9 +142,7 @@ class EntryTypesForm(forms.Form):
         if genomicVariant_endpoint_name != '':
             entry_types.append('genomicVariant')
             endpoint_names.append(genomicVariant_endpoint_name)
-            self.initial['GenomicVariant'] = True
-        else:
-            self.initial['GenomicVariant'] = None
+        self.initial['GenomicVariant'] = conf['entry_type_enabled']
         if conf['allow_queries_without_filters'] == False:
             self.initial['GenomicVariantNonFiltered'] = None
         else:
@@ -169,9 +159,7 @@ class EntryTypesForm(forms.Form):
         if individual_endpoint_name != '':
             entry_types.append('individual')
             endpoint_names.append(individual_endpoint_name)
-            self.initial['Individual'] = True
-        else:
-            self.initial['Individual'] = None
+        self.initial['Individual'] = conf['entry_type_enabled']
         if conf['allow_queries_without_filters'] == False:
             self.initial['IndividualNonFiltered'] = None
         else:
@@ -188,9 +176,7 @@ class EntryTypesForm(forms.Form):
         if run_endpoint_name != '':
             entry_types.append('run')
             endpoint_names.append(run_endpoint_name)
-            self.initial['Run'] = True
-        else:
-            self.initial['Run'] = None
+        self.initial['Run'] = conf['entry_type_enabled']
         if conf['allow_queries_without_filters'] == False:
             self.initial['RunNonFiltered'] = None
         else:
@@ -281,7 +267,8 @@ class EntryTypesForm(forms.Form):
     analysis_choices=generate_endpoints(analysis_choices, analysis_endpoint_name, analysis_endpoint_name, analysis_entry_type, analysis_lookups)
     AnalysisEndpoints = forms.MultipleChoiceField(
         choices=analysis_choices, 
-        widget=forms.CheckboxSelectMultiple
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
     )
     analysis_granularity= forms.ChoiceField(
         widget=forms.RadioSelect,
@@ -301,7 +288,8 @@ class EntryTypesForm(forms.Form):
     biosample_choices=generate_endpoints(biosample_choices, biosample_endpoint_name, biosample_endpoint_name, biosample_entry_type, biosample_lookups)
     BiosampleEndpoints = forms.MultipleChoiceField(
         choices=biosample_choices, 
-        widget=forms.CheckboxSelectMultiple
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
     )
     biosample_granularity= forms.ChoiceField(
         widget=forms.RadioSelect,
@@ -321,7 +309,8 @@ class EntryTypesForm(forms.Form):
     cohort_choices=generate_endpoints(cohort_choices, cohort_endpoint_name, cohort_endpoint_name, cohort_entry_type, cohort_lookups)
     CohortEndpoints = forms.MultipleChoiceField(
         choices=cohort_choices, 
-        widget=forms.CheckboxSelectMultiple
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
     )
     cohort_granularity= forms.ChoiceField(
         widget=forms.RadioSelect,
@@ -341,7 +330,8 @@ class EntryTypesForm(forms.Form):
     dataset_choices=generate_endpoints(dataset_choices, dataset_endpoint_name, dataset_endpoint_name, dataset_entry_type, dataset_lookups)
     DatasetEndpoints = forms.MultipleChoiceField(
         choices=dataset_choices, 
-        widget=forms.CheckboxSelectMultiple
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
     )
     dataset_granularity= forms.ChoiceField(
         widget=forms.RadioSelect,
@@ -361,7 +351,8 @@ class EntryTypesForm(forms.Form):
     genomicVariant_choices=generate_endpoints(genomicVariant_choices, genomicVariant_endpoint_name, genomicVariant_endpoint_name, genomicVariant_entry_type, genomicVariant_lookups)
     GenomicVariantEndpoints = forms.MultipleChoiceField(
         choices=genomicVariant_choices, 
-        widget=forms.CheckboxSelectMultiple
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
     )
     genomicVariation_granularity= forms.ChoiceField(
         widget=forms.RadioSelect,
@@ -381,7 +372,8 @@ class EntryTypesForm(forms.Form):
     individual_choices=generate_endpoints(individual_choices, individual_endpoint_name, individual_endpoint_name, individual_entry_type, individual_lookups)
     IndividualEndpoints = forms.MultipleChoiceField(
         choices=individual_choices, 
-        widget=forms.CheckboxSelectMultiple
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
     )
     individual_granularity= forms.ChoiceField(
         widget=forms.RadioSelect,
@@ -401,7 +393,8 @@ class EntryTypesForm(forms.Form):
     run_choices=generate_endpoints(run_choices, run_endpoint_name, run_endpoint_name, run_entry_type, run_lookups)
     RunEndpoints = forms.MultipleChoiceField(
         choices=run_choices, 
-        widget=forms.CheckboxSelectMultiple
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
     )
     run_granularity= forms.ChoiceField(
         widget=forms.RadioSelect,

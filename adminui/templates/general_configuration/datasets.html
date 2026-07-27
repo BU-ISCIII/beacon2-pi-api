@@ -14,6 +14,10 @@
 
 <body>
   <body class="bg-custom-powder-light" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'> <!-- NEW - hx-headers added -->
+    <form id="test-mode-form" method="post" onsubmit="openLoader()">
+        {% csrf_token %}
+        <input hidden type="text" name="DatasetID" value="Test Mode">
+    </form>
     {% for dataset in datasets_found %}
     <div class="dataset">
         {% for key, value in dataset.items %}
@@ -29,26 +33,26 @@
                             {% if key2 == value %}
                                 {% for key3, value3 in value2.items %}
                                     {% if key3 == 'isTest' and value3 == True %}
-                                        <input type="checkbox" class="btn btn-danger mb-3" id="id_{{value}}" name="{{value}}" checked>Test Mode</input>
+                                        <input type="checkbox" class="btn btn-danger mb-3" id="id_{{value}}" name="{{value}}" form="test-mode-form" checked>Test Mode</input>
                                     {% elif key3 == 'isTest' %}
-                                    <input type="checkbox" class="btn btn-danger mb-3" id="id_{{value}}" name="{{value}}">Test Mode</input>
+                                    <input type="checkbox" class="btn btn-danger mb-3" id="id_{{value}}" name="{{value}}" form="test-mode-form">Test Mode</input>
                                     {% endif %}
                                 {% endfor %}
                             {% endif %}
                         {% endfor %}
                     {% else %}
-                        <input type="checkbox" class="btn btn-danger mb-3" id="id_{{value}}" name="{{value}}">Test Mode</input>
+                        <input type="checkbox" class="btn btn-danger mb-3" id="id_{{value}}" name="{{value}}" form="test-mode-form">Test Mode</input>
                     {% endif %}
 
                     <button type="submit" class="btn btn-danger mb-3" name="Delete Dataset" value="Delete Dataset">Delete Dataset</button>
                 </div>
-            
+            </form>
 
             {% endif %}
         {% endfor %}
 
     </div>
     {% endfor %}
-    <button type="submit" class="btn btn-danger mb-3" name="Test Mode" value="Test Mode">Save</button>
-    </form>
+    <button type="submit" class="btn btn-danger mb-3" name="Test Mode" value="Test Mode" form="test-mode-form">Save</button>
 </body>
+</html>
