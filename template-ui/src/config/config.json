@@ -12,7 +12,7 @@
     { "jsonName": "BND", "displayName": "BND" }
   ],
   "ui": {
-    "title": "EGA Beacon Browser",
+    "title": "ISCIII-CIBER Beacon Browser",
     "favicon": "/assets/logos/favicon.ico",
     "colors": {
       "primary": "#3176B1",
@@ -30,8 +30,12 @@
     "showExternalNavBarLink": true,
     "externalNavBarLink": [
       {
-        "label": "AF Browser",
+        "label": "EGA AF Browser",
         "url": "https://af-beacon.ega-archive.org/"
+      },
+      {
+        "label": "Admin UI",
+        "url": "http://beaconaf-isciiiciber.isciiides.es:8443/admin-ui/"
       }
     ],
     "showAboutPage": true,
@@ -62,12 +66,12 @@
     "auth": {
       "providerType": "private",
       "oidc": {
-        "authority": "https://login.aai.lifescience-ri.eu/oidc",
+        "authority": "http://beaconaf-isciiiciber.isciiides.es:8443/auth/realms/Beacon",
         "autoSignIn": false,
         "responseType": "code",
         "automaticSilentRenew": true,
-        "redirectUri": "http://localhost:3000/",
-        "scope": "openid profile email ga4gh_passport_v1 offline_access",
+        "redirectUri": "http://beaconaf-isciiiciber.isciiides.es:8443/",
+        "scope": "openid profile email",
         "revokeAccessTokenOnSignout": true
       }
     },

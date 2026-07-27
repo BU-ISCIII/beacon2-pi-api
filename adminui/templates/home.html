@@ -1,1 +1,48 @@
 {% extends "base.html" %}
+
+{% block body %}
+
+<h1>Beacon administration</h1>
+
+<h2>General Beacon configuration</h2>
+
+<form method="post" onsubmit="openLoader()">
+  {% csrf_token %}
+
+  <div>
+    {% for f in form %}
+      <p>{{ f.help_text|safe }} {{ f }}</p>
+    {% endfor %}
+  </div>
+
+  <div>
+    <button type="submit">Save</button>
+  </div>
+</form>
+
+<hr>
+
+<h2>Configuration sections</h2>
+
+<ul>
+  <li><a href="/admin-ui/">General Beacon configuration</a></li>
+  <li><a href="/admin-ui/entry_types">Entry types</a></li>
+  <li><a href="/admin-ui/datasets">Datasets</a></li>
+  <li><a href="/admin-ui/filtering_terms">Filtering terms</a></li>
+  <li><a href="/admin-ui/permits">Dataset permits</a></li>
+  <li><a href="/admin-ui/budget">Query budget</a></li>
+  <li><a href="/admin-ui/rounding_counts">Rounding counts</a></li>
+  <li><a href="/admin-ui/connections">Database connections</a></li>
+  <li><a href="/admin-ui/service_status">Service status</a></li>
+  <li><a href="/admin-ui/identity_provider">Identity provider</a></li>
+  <li><a href="/admin-ui/verifier">Verifier</a></li>
+  <li><a href="/admin-ui/admin_settings">User permissions</a></li>
+</ul>
+
+<h2>Technical administration</h2>
+
+<ul>
+  <li><a href="/admin-ui/admin/">Django administration</a></li>
+</ul>
+
+{% endblock %}
