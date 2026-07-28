@@ -30,6 +30,7 @@ La ingesta de datasets y variantes se realiza mediante `impact-tools`, instalado
 - [Backup antes de actualizar](#backup-antes-de-actualizar)
 - [Preparar permisos y SELinux](#preparar-permisos-y-selinux)
 - [Construir y arrancar el stack](#construir-y-arrancar-el-stack)
+- [Gestión de usuarios administrativos](#gestión-de-usuarios-administrativos)
 - [Comprobaciones posteriores](#comprobaciones-posteriores)
 - [Actualizar el despliegue](#actualizar-el-despliegue)
 - [Rollback](#rollback)
@@ -65,7 +66,7 @@ El usuario que ejecuta Podman debe ser siempre el mismo usuario que gestiona la 
 Los ejemplos de esta guía utilizan:
 
 ```text
-/opt/beacon/beacon2-pi-api-isciii
+/opt/containers_apps/beacon/beacon2-pi-api
 ```
 
 Las rutas reales se configuran en `.env`.
@@ -119,7 +120,7 @@ ${APACHE_LOG_DIR}/
 En la instalación validada:
 
 ```dotenv
-APP_ROOT=/opt/beacon/beacon2-pi-api-isciii
+APP_ROOT=/opt/containers_apps/beacon/beacon2-pi-api
 BIND_ROOT=/srv/containers/bind/beacon
 APP_LOG_DIR=/var/log/local/beacon/apps
 APACHE_LOG_DIR=/var/log/local/beacon/apache
@@ -164,19 +165,12 @@ En `dcontainers00` se utiliza:
 ### Instalación nueva
 
 ```bash
-cd /opt/beacon
+cd /opt/containers_apps/beacon
 
 git clone \
-  https://github.com/BU-ISCIII/beacon2-pi-api.git \
-  beacon2-pi-api-isciii
+  https://github.com/BU-ISCIII/beacon2-pi-api.git
 
-cd beacon2-pi-api-isciii
-```
-
-Selecciona la rama de despliegue:
-
-```bash
-git switch isciii-installation-v2.1.0
+cd beacon2-pi-api
 ```
 
 ### Instalación existente
@@ -184,7 +178,7 @@ git switch isciii-installation-v2.1.0
 Entra en el repositorio con el mismo usuario que ejecuta Podman:
 
 ```bash
-cd /opt/beacon/beacon2-pi-api-isciii
+cd /opt/containers_apps/beacon/beacon2-pi-api
 
 git status
 git fetch --all --prune
@@ -195,7 +189,7 @@ No actualices el código mientras existan cambios locales sin revisar.
 Para actualizar una rama ya configurada:
 
 ```bash
-git switch isciii-installation-v2.1.0
+git checkout main
 git pull --ff-only
 ```
 
@@ -262,7 +256,7 @@ ${BIND_ROOT}/etc/certs/beacon_server.crt
 ${BIND_ROOT}/etc/certs/beacon_server.key
 ```
 
-**Pendiente:** certificados institucionales y terminación TLS en Apache de cara al exterior.
+**Pendiente:** certificados institucionales y terminación TLS en Apache para acceso exterior.
 
 ## Backup antes de actualizar
 
@@ -450,6 +444,96 @@ apache-beacon
 
 Los nombres concretos se obtienen de `.env`.
 
+## Gestión de usuarios administrativos
+
+Los usuarios administrativos se gestionan de forma independiente en Admin UI, Keycloak y MongoDB.
+
+Antes de utilizar los comandos de esta sección, carga las variables del despliegue:
+
+```bash
+set -a
+source .env
+set +a
+```
+
+### Admin UI
+
+Para crear un superusuario de Django:
+
+```bash
+podman exec -it "${ADMIN_UI_CONTAINER}" \
+  python manage.py createsuperuser --skip-checks
+```
+
+El comando solicita de forma interactiva el nombre de usuario, el correo electrónico y la contraseña.
+
+Los usuarios existentes pueden consultarse desde el panel de administración:
+
+```text
+${PUBLIC_SCHEME}://${PUBLIC_HOST}:${PUBLIC_PORT}/admin-ui/admin/
+```
+
+### Keycloak
+
+El administrador inicial de Keycloak se define en `.env` antes del primer arranque:
+
+```dotenv
+KEYCLOAK_ADMIN=admin
+KEYCLOAK_ADMIN_PASSWORD=<contraseña-segura>
+```
+
+Estas variables crean el administrador únicamente durante la inicialización. Si PostgreSQL ya contiene una instalación de Keycloak, modificar sus valores en `.env` no cambia automáticamente la contraseña del usuario existente.
+
+Los usuarios adicionales, sus contraseñas y sus roles deben gestionarse desde la consola de administración:
+
+```text
+${PUBLIC_SCHEME}://${PUBLIC_HOST}:${PUBLIC_PORT}${KEYCLOAK_RELATIVE_PATH}/admin/
+```
+
+Para conceder permisos administrativos, asigna al usuario los roles correspondientes desde la sección **Role mapping** de Keycloak.
+
+### MongoDB
+
+El usuario administrador inicial de MongoDB se configura en `.env`:
+
+```dotenv
+MONGO_ROOT_USERNAME=root
+MONGO_ROOT_PASSWORD=<contraseña-segura>
+```
+
+Estas variables solo crean el usuario cuando se inicializa una base de datos vacía. Modificarlas después no actualiza las credenciales almacenadas en una instalación existente.
+
+Para acceder a la consola administrativa:
+
+```bash
+podman exec -it "${MONGO_CONTAINER}" \
+  mongosh \
+  -u "${MONGO_ROOT_USERNAME}" \
+  -p \  # -p "${MONGO_ROOT_PASSWORD}" \
+  --authenticationDatabase "${MONGO_AUTH_SOURCE}"
+```
+
+El parámetro `-p` solicita la contraseña de forma interactiva y evita incluirla directamente en el historial de la terminal.
+
+### Mongo Express
+
+Mongo Express no mantiene usuarios propios. Su acceso web utiliza autenticación básica configurada mediante variables de entorno.
+
+```dotenv
+MONGO_EXPRESS_USERNAME=<usuario>
+MONGO_EXPRESS_PASSWORD=<contraseña-segura>
+```
+
+Para comprobar el acceso:
+
+```bash
+curl -s -u "${MONGO_EXPRESS_USERNAME}:${MONGO_EXPRESS_PASSWORD}" \
+  -o /dev/null -w "HTTP %{http_code}\n" \
+  "${PUBLIC_SCHEME}://${PUBLIC_HOST}:${PUBLIC_PORT}/mongo-express/"
+```
+
+No deben utilizarse las credenciales predeterminadas `admin:pass`. 
+
 ## Comprobaciones posteriores
 
 ### Estado de los contenedores
@@ -459,6 +543,17 @@ podman compose ps
 ```
 
 Ningún contenedor debe permanecer en estado `Restarting` o `Exited`.
+
+### Comprobar que todos los endpoints funcionan
+
+Desde la raíz del repositorio, ejecuta:
+
+```bash
+chmod +x deploy/check_endpoints.sh
+./deploy/check_endpoints.sh
+```
+
+El script comprueba el acceso a Template UI, Beacon API, Keycloak, Admin UI y Mongo Express. Todos los endpoints deben devolver OK.
 
 ### Template UI
 
@@ -577,10 +672,10 @@ Guarda primero un backup siguiendo la sección anterior.
 Actualiza el código:
 
 ```bash
-cd /opt/beacon/beacon2-pi-api-isciii
+cd /opt/containers_apps/beacon/beacon2-pi-api
 
 git fetch --all --prune
-git switch isciii-installation-v2.1.0
+git checkout main
 git pull --ff-only
 ```
 
@@ -624,7 +719,7 @@ Recupera el commit anterior:
 
 ```bash
 PREVIOUS_COMMIT="$(cat "${BACKUP_DIR}/git_commit.txt")"
-git switch --detach "${PREVIOUS_COMMIT}"
+git checkout --detach "${PREVIOUS_COMMIT}"
 ```
 
 Restaura `.env`:
@@ -661,10 +756,11 @@ podman compose up -d
 
 Comprueba contenedores y endpoints.
 
-Una vez validado el rollback, vuelve a una rama de despliegue normal antes de realizar nuevos cambios:
+Mantén la instalación en este commit mientras se investiga el problema. Una vez resuelta la causa del fallo y cuando quieras volver a la versión actual:
 
 ```bash
-git switch isciii-installation-v2.1.0
+git checkout main
+git pull --ff-only
 ```
 
 ## Reparar permisos
@@ -675,7 +771,7 @@ Ejecuta `fix_permissions.sh` cuando:
 - se hayan restaurado datos desde un backup;
 - hayan cambiado propietarios en el host;
 - hayan cambiado los UIDs o GIDs definidos en `.env`;
-- Admin UI no pueda guardar configuraciones;
+- Admin UI no pueda guardar configuraciones (error en botón "save");
 - un contenedor falle con `Permission denied`;
 - se hayan perdido o modificado las etiquetas SELinux;
 - se haya movido la instalación a otra ruta.
@@ -786,6 +882,32 @@ podman system df
 podman info --format '{{.Store.GraphRoot}}'
 ```
 
+### Restablecer permisos de un servicio concreto
+
+Detén el servicio, repara sus permisos y vuelve a arrancarlo:
+
+```bash
+podman compose stop <servicio>
+./deploy/fix_permissions.sh <servicio>
+podman compose up -d <servicio>
+```
+
+Servicios admitidos:
+
+- `db`(mongodb)
+- `idp-db` (postgresql)
+- `admin-ui`
+- `beaconprod`
+- `apache-beacon`
+- `template-ui`
+
+Para reparar todo el despliegue:
+```bash
+podman compose down
+./deploy/fix_permissions.sh
+podman compose up -d
+```
+
 ## Troubleshooting
 
 ### `Permission denied` en un bind mount
@@ -797,6 +919,10 @@ podman compose down
 ./deploy/fix_permissions.sh
 podman compose up -d
 ```
+
+### Gestionar usuarios administrativos
+
+Consulta la sección [Gestión de usuarios administrativos](#gestión-de-usuarios-administrativos).
 
 ### Admin UI no puede guardar cambios
 
@@ -811,9 +937,9 @@ sobre un fichero en `/home/app/web/beacon/` indica que falta la ACL del UID inte
 Repara los permisos:
 
 ```bash
-podman compose down
-./deploy/fix_permissions.sh
-podman compose up -d
+podman compose stop admin-ui
+./deploy/fix_permissions.sh admin-ui
+podman compose up -d admin-ui
 ```
 
 ### MongoDB no arranca por ownership
