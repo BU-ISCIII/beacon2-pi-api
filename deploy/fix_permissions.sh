@@ -41,7 +41,6 @@ required_variables=(
     APP_ROOT
     BIND_ROOT
     APP_LOG_DIR
-    APACHE_LOG_DIR
 
     MONGO_UID MONGO_GID
     POSTGRES_UID POSTGRES_GID
@@ -126,9 +125,9 @@ if want db; then
         "${MONGO_ROOT}/db" \
         "${MONGO_ROOT}/configdb" \
         "${MONGO_ROOT}/caseLevelData" \
-        "${APP_LOG_DIR}"
+        "${APP_LOG_DIR}/mongo"
 
-    podman unshare touch "${APP_LOG_DIR}/mongod.log"
+    podman unshare touch "${APP_LOG_DIR}/mongo/mongod.log"
 fi
 
 if want idp-db; then
@@ -150,7 +149,7 @@ if want beaconprod; then
 fi
 
 if want apache-beacon; then
-    mkdir -p "${APACHE_LOG_DIR}"
+    mkdir -p "${APP_LOG_DIR}/apache"
 fi
 
 if want db; then
@@ -231,10 +230,10 @@ fi
 if want db; then
     podman unshare chown \
         "${MONGO_UID}:${MONGO_GID}" \
-        "${APP_LOG_DIR}/mongod.log"
+        "${APP_LOG_DIR}/mongo/mongod.log"
 
     podman unshare chmod 0644 \
-        "${APP_LOG_DIR}/mongod.log"
+        "${APP_LOG_DIR}/mongo/mongod.log"
 fi
 
 if want idp-db; then
@@ -249,10 +248,10 @@ fi
 if want apache-beacon; then
     podman unshare chown -R \
         "${APACHE_UID}:${APACHE_GID}" \
-        "${APACHE_LOG_DIR}"
+        "${APP_LOG_DIR}/apache"
 
     podman unshare chmod 0755 \
-        "${APACHE_LOG_DIR}"
+        "${APP_LOG_DIR}/apache"
 fi
 
 if want beaconprod; then
@@ -290,7 +289,7 @@ if command -v getenforce >/dev/null 2>&1 &&
             "${APP_ROOT}/template-ui"
             "${BIND_ROOT}"
             "${APP_LOG_DIR}"
-            "${APACHE_LOG_DIR}"
+            "${APP_LOG_DIR}/apache"
         )
     else
         selinux_paths=()
@@ -298,7 +297,7 @@ if command -v getenforce >/dev/null 2>&1 &&
         want db && selinux_paths+=(
             "${APP_ROOT}/beacon/connections/mongo"
             "${MONGO_ROOT}"
-            "${APP_LOG_DIR}/mongod.log"
+            "${APP_LOG_DIR}/mongo/mongod.log"
         )
 
         want idp-db && selinux_paths+=(
@@ -320,7 +319,7 @@ if command -v getenforce >/dev/null 2>&1 &&
 
         want apache-beacon && selinux_paths+=(
             "${APP_ROOT}/conf"
-            "${APACHE_LOG_DIR}"
+            "${APP_LOG_DIR}/apache"
         )
 
         want template-ui && selinux_paths+=(
@@ -361,9 +360,9 @@ if [[ "${SERVICE}" == "all" ]]; then
         "${ADMIN_UI_DATA}"
         "${ADMIN_UI_DATA}/db.sqlite3"
         "${APP_LOG_DIR}/beacon.log"
-        "${APP_LOG_DIR}/mongod.log"
+        "${APP_LOG_DIR}/mongo/mongod.log"
         "${APP_LOG_DIR}/postgres"
-        "${APACHE_LOG_DIR}"
+        "${APP_LOG_DIR}/apache"
         "${CERTS_DIR}/beacon_server.crt"
         "${CERTS_DIR}/beacon_server.key"
     )
@@ -373,7 +372,7 @@ else
     want db && status_paths+=(
         "${MONGO_ROOT}/db"
         "${MONGO_ROOT}/configdb"
-        "${APP_LOG_DIR}/mongod.log"
+        "${APP_LOG_DIR}/mongo/mongod.log"
     )
 
     want idp-db && status_paths+=(
@@ -393,7 +392,7 @@ else
     )
 
     want apache-beacon && status_paths+=(
-        "${APACHE_LOG_DIR}"
+        "${APP_LOG_DIR}/apache"
     )
 
     want template-ui && status_paths+=(
