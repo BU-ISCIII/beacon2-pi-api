@@ -121,7 +121,7 @@ services:
       - ${BIND_ROOT}/runtime/mongo/configdb:/data/configdb
       - ${BIND_ROOT}/runtime/mongo/caseLevelData:/data/caseLevelData
       - ${APP_ROOT}/beacon/connections/mongo/mongod.conf:/etc/mongod.conf:ro
-      - ${APP_LOG_DIR}/mongod.log:/var/log/mongodb/mongod.log
+      - ${APP_LOG_DIR}/mongo/mongod.log:/var/log/mongodb/mongod.log
       #- ./test-server1.pem:/test-server1.pem
       #- ./test-ca.pem:/test-ca.pem
       #- ./test-client.pem:/test-client.pem
@@ -188,6 +188,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
       - ${APP_ROOT}/conf/beacon_apache_reverse_proxy.conf:/etc/httpd/conf.d/beacon.conf:ro
-      - ${APACHE_LOG_DIR}:/var/log/httpd
+      - ${APP_LOG_DIR}/apache:/var/log/httpd
     networks:
       - pub
