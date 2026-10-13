@@ -19,27 +19,18 @@ La ingesta de datasets y variantes se realiza mediante [`impact-tools`](https://
 
 ## Índice
 
-**Parte I. Instalación inicial**
-
-*Antes de empezar*
-
 - [Requisitos](#requisitos)
 - [Estructura de la instalación](#estructura-de-la-instalación)
-
-*Instalación paso a paso*
-
-1. [Preparar directorios del host](#1-preparar-directorios-del-host)
-2. [Obtener o actualizar el código](#2-obtener-o-actualizar-el-código)
-3. [Configurar `.env`](#3-configurar-env)
-4. [Certificados y TLS](#4-certificados-y-tls)
-5. [Preparar permisos y SELinux](#5-preparar-permisos-y-selinux)
-6. [Construir y arrancar el stack](#6-construir-y-arrancar-el-stack)
-7. [Gestión de usuarios administrativos](#7-gestión-de-usuarios-administrativos)
-8. [Comprobaciones posteriores](#8-comprobaciones-posteriores)
-
-**Parte II. Operación y mantenimiento**
-
-- [Rotación de logs de MongoDB](#rotación-de-logs-de-mongodb)
+- [Preparar directorios del host](#preparar-directorios-del-host)
+- [Obtener o actualizar el código](#obtener-o-actualizar-el-código)
+- [Configurar `.env`](#configurar-env)
+- [Certificados y TLS](#certificados-y-tls)
+- [Backup antes de actualizar](#backup-antes-de-actualizar)
+- [Preparar permisos y SELinux](#preparar-permisos-y-selinux)
+- [Construir y arrancar el stack](#construir-y-arrancar-el-stack)
+- [Gestión de usuarios administrativos](#gestión-de-usuarios-administrativos)
+- [Comprobaciones posteriores](#comprobaciones-posteriores)
+- [Rotación de logs de MongoDB](#rotación-de-logs-de-MongoDB)
 - [Backup antes de actualizar](#backup-antes-de-actualizar)
 - [Actualizar el despliegue](#actualizar-el-despliegue)
 - [Rollback](#rollback)
@@ -47,11 +38,7 @@ La ingesta de datasets y variantes se realiza mediante [`impact-tools`](https://
 - [Operaciones útiles](#operaciones-útiles)
 - [Troubleshooting](#troubleshooting)
 
-# Parte I. Instalación inicial
-
-## Antes de empezar
-
-### Requisitos
+## Requisitos
 
 El despliegue utiliza:
 
@@ -72,8 +59,6 @@ podman info
 podman ps
 ```
 
-No ejecutes `podman compose` ni `deploy/fix_permissions.sh` con `sudo`.
-
 El usuario que ejecuta Podman debe ser siempre el mismo usuario que gestiona la instalación.
 
 Los ejemplos de esta guía utilizan:
@@ -84,80 +69,7 @@ Los ejemplos de esta guía utilizan:
 
 Las rutas reales se configuran en `.env`.
 
-**Qué debe preparar sistemas**
-
-El usuario que ejecuta Podman no tiene `sudo`; estos elementos dependen de sistemas:
-
-- **Rangos `subuid`/`subgid`** para el usuario: sin ellos Podman rootless no arranca ningún contenedor, porque no puede mapear los UIDs internos.
-- **Directorios base y su ownership** (el usuario no puede escribir en `/srv/containers` ni `/var/log/local`):
-
-  ```bash
-  sudo mkdir -p /srv/containers/bind/beacon /var/log/local/beacon/apps
-  sudo chown -R <usuario>:<usuario> \
-    /srv/containers/bind/beacon \
-    /var/log/local/beacon
-  ```
-
-- **Lingering** para el usuario: sin él, el timer de rotación de logs deja de ejecutarse tras un reinicio si nadie ha iniciado sesión (`sudo loginctl enable-linger <usuario>`).
-- **DNS y firewall de entrada:** sin un registro DNS que apunte `PUBLIC_HOST`/`API_PUBLIC_HOST` a la IP de la VM el nombre no resuelve (solo se llega por IP); y si el firewall no abre `PUBLIC_PORT`, el stack arranca pero no es accesible desde fuera.
-- **Salida a los registros de imágenes:** si un proxy o firewall de salida bloquea `docker.io`, `quay.io`, `ghcr.io` o `registry.access.redhat.com`, `podman compose build`/`pull` falla al no poder descargar las imágenes base.
-
-### Estructura de la instalación
-
-```mermaid
-flowchart TB
-    client["Cliente externo (navegador / curl)"]
-
-    subgraph net["Red pub (contenedores)"]
-        apache["apache-beacon UID 1001<br/>reverse proxy 8080"]
-        template["template-ui 3000"]
-        beacon["beaconprod UID 10001<br/>Beacon API 5050"]
-        adminui["admin-ui 3001 (Django)"]
-        idp["idp Keycloak 8082"]
-        mexpress["mongo-express 8081"]
-        mongo["mongoprod UID 999<br/>MongoDB 27017"]
-        pg["idp-db UID 999<br/>PostgreSQL 5432"]
-    end
-
-    subgraph bind["Datos persistentes (BIND_ROOT)"]
-        b_mongo[("runtime/mongo")]
-        b_pg[("runtime/postgres/data")]
-        b_admin[("runtime/admin-ui/db.sqlite3")]
-        b_certs[("etc/certs")]
-    end
-
-    subgraph logs["Logs (APP_LOG_DIR)"]
-        l_beacon["beacon.log"]
-        l_mongo["mongo"]
-        l_pg["postgres"]
-        l_apache["apache"]
-    end
-
-    client -->|"PUBLIC_PORT a 8080"| apache
-    apache -->|"/"| template
-    apache -->|"/api"| beacon
-    apache -->|"/admin-ui/"| adminui
-    apache -->|"/auth/"| idp
-    apache -->|"/mongo-express/"| mexpress
-
-    beacon --> mongo
-    mexpress --> mongo
-    idp --> pg
-
-    mongo -.-> b_mongo
-    pg -.-> b_pg
-    adminui -.-> b_admin
-    beacon -.-> b_certs
-
-    beacon -.-> l_beacon
-    mongo -.-> l_mongo
-    pg -.-> l_pg
-    apache -.-> l_apache
-```
-
-Líneas continuas: tráfico HTTP entre servicios. Líneas discontinuas: bind mounts hacia el host (datos y logs). Los nombres de servicio, UIDs y puertos concretos se definen en `.env`.
-
-#### Ficheros y datos
+## Estructura de la instalación
 
 El código se mantiene separado de los datos persistentes, certificados y logs.
 
@@ -213,28 +125,7 @@ APP_LOG_DIR=/var/log/local/beacon/apps
 
 Los datos persistentes, certificados, logs y secretos no deben añadirse a Git.
 
-#### Rutas de la arquitectura rootless
-
-El despliegue reparte sus ficheros en rutas fijas del host, cada una con un propósito:
-
-| Ruta | Contenido |
-|------|-----------|
-| `/opt/containers_apps/<APP>/` | Código y repositorios (este repo) |
-| `/srv/containers/bind/<APP>/` | Datos persistentes montados como bind mounts |
-| `/srv/containers/storage/$USER/` | Almacenamiento (*graph root*) de Podman rootless |
-| `/var/log/local/<APP>/apps/` | Logs de las aplicaciones |
-| `~/.config/systemd/user/` | Servicios y *timers* de `systemd --user` |
-| `~/.config/logrotate/` | Configuración de rotación de logs del usuario |
-
-Los datos persistentes se mantienen **fuera del repositorio** de forma deliberada:
-
-- separan el ciclo de vida del **código** (git, ramas, `build`, `pull`) del de los **datos** (backup, restauración, migración);
-- evitan que un `git checkout`, un `git pull` o una reconstrucción de imágenes toquen o borren datos de MongoDB, PostgreSQL o Admin UI;
-- permiten aplicar ownership, permisos y etiquetas SELinux al árbol de datos de forma independiente del código.
-
-## Instalación paso a paso
-
-### 1. Preparar directorios del host
+## Preparar directorios del host
 
 Los directorios padre deben existir y ser accesibles por el usuario que ejecuta Podman.
 
@@ -242,16 +133,15 @@ Si el usuario no puede crear rutas en `/srv/containers` o `/var/log/local`, debe
 
 ```bash
 sudo mkdir -p /srv/containers/bind/beacon
-sudo mkdir -p /var/log/local/beacon
+sudo mkdir -p /var/log/local/beacon/apps
+
 sudo chown -R _USER-RUNNING-PODMAN_:_USER-RUNNING-PODMAN_ \
   /srv/containers/bind/beacon \
   /var/log/local/beacon
 
 ```
 
-No es necesario crear manualmente todos los subdirectorios internos.
-
-`deploy/fix_permissions.sh` crea las rutas necesarias y aplica los UIDs, GIDs y etiquetas correspondientes.
+No es necesario crear manualmente todos los subdirectorios internos. Más adelante, `deploy/fix_permissions.sh` creará las rutas necesarias y aplica los UIDs, GIDs y etiquetas correspondientes.
 
 Comprueba el almacenamiento rootless utilizado por Podman:
 
@@ -265,9 +155,9 @@ En `dcontainers00` se utiliza:
 /srv/containers/storage/bioinfo
 ```
 
-### 2. Obtener o actualizar el código
+## Obtener o actualizar el código
 
-#### Instalación nueva
+### Instalación nueva
 
 ```bash
 cd /opt/containers_apps/beacon
@@ -278,7 +168,7 @@ git clone \
 cd beacon2-pi-api
 ```
 
-#### Instalación existente
+### Instalación existente
 
 Entra en el repositorio con el mismo usuario que ejecuta Podman:
 
@@ -298,7 +188,7 @@ git checkout main
 git pull --ff-only
 ```
 
-### 3. Configurar `.env`
+## Configurar `.env`
 
 Si `.env` no existe, créalo a partir de la plantilla:
 
@@ -338,7 +228,7 @@ diff -u .env.example .env
 
 No copies directamente `.env.example` sobre una configuración existente.
 
-### 4. Certificados y TLS
+## Certificados y TLS
 
 En este despliegue **el tráfico interno entre contenedores va en claro**:
 
@@ -346,7 +236,7 @@ En este despliegue **el tráfico interno entre contenedores va en claro**:
 - MongoDB no utiliza TLS. La sección `net.tls` de `mongod.conf` está comentada.
 - Apache habla con Beacon mediante `ProxyPass http://beaconprod:5050/api`.
 
-Comprobar que `beacon/conf/conf.py` declara el `uri` con el mismo esquema:
+`beacon/conf/conf.py` debe declarar el `uri` con el mismo esquema:
 
 ```python
 uri = 'http://beaconprod:5050'
@@ -363,21 +253,11 @@ ${BIND_ROOT}/etc/certs/beacon_server.key
 
 **Pendiente:** certificados institucionales y terminación TLS en Apache para acceso exterior.
 
-### 5. Preparar permisos y SELinux
+## Preparar permisos y SELinux
 
 Los contenedores ejecutan procesos con distintos UIDs dentro del namespace rootless.
 
 No se depende de los modificadores automáticos `:Z`, `:z` o `:U` para gestionar los bind mounts.
-
-#### Modelo de permisos en Podman rootless
-
-En Podman rootless, el UID que un proceso usa **dentro** del contenedor no es el mismo que se ve en el host: se traduce a través del rango `subuid` del usuario. Un proceso que corre como UID 999 dentro del contenedor aparece en el host como un UID alto de ese rango. Por eso los ajustes de ownership se hacen con `podman unshare chown <UID-interno>` (la traducción al UID real del host es automática) y no con un `chown` normal.
-
-A partir de ahí, cada mecanismo resuelve un problema distinto:
-
-- **Ownership y permisos:** cada servicio escribe como un UID distinto; sus datos persistentes (`runtime/mongo`, `runtime/postgres`, `runtime/admin-ui`) deben pertenecer a ese UID antes de arrancar. PostgreSQL es una excepción: su directorio se deja como `0:0` porque el entrypoint necesita arrancar como root del namespace y hace su propio `chown` interno.
-- **ACL:** el **código** del repositorio se mantiene propiedad del usuario del host, para poder editarlo sin `podman unshare`. El acceso de escritura que Admin UI necesita sobre ciertos ficheros de configuración se concede con ACL (`setfacl`) para el UID interno de Admin UI, en lugar de cambiar el propietario. Se aplican también como ACL por defecto en los directorios, para que los ficheros nuevos las hereden.
-- **SELinux:** los bind mounts deben tener el tipo `container_file_t` y el nivel `s0` (compartido) para que el contenedor pueda leerlos. Se evita el nivel MCS privado (`s0:c123,c456`) que dejaban los modificadores `:Z`/`:z`; por eso se retiraron esos flags del `docker-compose.yml` y las etiquetas se gestionan de forma explícita.
 
 La preparación se realiza mediante:
 
@@ -423,10 +303,12 @@ podman unshare setfacl -m "u:${ADMIN_UI_UID}:rw" \
   "${APP_ROOT}/beacon/conf/conf.py"
 ```
 
-Ejecuta:
+Ejecuta, con el stack bajado (`podman compose down`):
 
 ```bash
-podman compose down
+set -a
+source .env
+set +a
 
 chmod +x deploy/fix_permissions.sh
 ./deploy/fix_permissions.sh
@@ -436,7 +318,7 @@ El script se detendrá si detecta algún contenedor del stack activo.
 
 Al finalizar muestra los modos y propietarios efectivos de las rutas principales.
 
-### 6. Construir y arrancar el stack
+## Construir y arrancar el stack
 
 Valida primero la configuración de Compose:
 
@@ -493,7 +375,7 @@ apache-beacon
 
 Los nombres concretos se obtienen de `.env`.
 
-### 7. Gestión de usuarios administrativos
+## Gestión de usuarios administrativos
 
 Los usuarios administrativos se gestionan de forma independiente en Admin UI, Keycloak y MongoDB.
 
@@ -505,7 +387,41 @@ source .env
 set +a
 ```
 
-#### Admin UI
+### Admin UI
+
+Antes de usar el Admin UI, genera una `SECRET_KEY` propia para esta instalación:
+
+```bash
+openssl rand -base64 48
+```
+
+Copia el resultado en `.env`, sin comillas ni espacios:
+
+```dotenv
+SECRET_KEY=<clave-generada>
+SQL_DATABASE=/data/db.sqlite3
+```
+
+Django usa esta clave para firmar sesiones y formularios. No está asociada a ningún usuario ni hay que introducirla al iniciar sesión. Si se deja vacía, el contenedor arranca, pero el inicio de sesión desde el navegador falla con un error 500.
+
+Tras editar `.env`, recrea el contenedor para que reciba la variable:
+
+```bash
+set -a
+source .env
+set +a
+
+podman stop "${ADMIN_UI_CONTAINER}"
+podman rm "${ADMIN_UI_CONTAINER}"
+podman-compose up -d "${ADMIN_UI_CONTAINER}"
+```
+
+Para comprobar que la clave ha llegado al contenedor sin mostrar su valor (debe devolver un número mayor que 0):
+
+```bash
+podman exec "${ADMIN_UI_CONTAINER}" \
+  python -c 'import os; print(len(os.getenv("SECRET_KEY") or ""))'
+```
 
 Para crear un superusuario de Django:
 
@@ -522,11 +438,11 @@ Los usuarios existentes pueden consultarse desde el panel de administración:
 ${PUBLIC_SCHEME}://${PUBLIC_HOST}:${PUBLIC_PORT}/admin-ui/admin/
 ```
 
-#### Keycloak
+### Keycloak
 
 El administrador inicial de Keycloak se define en `.env` antes del primer arranque:
 
-```dotenv
+```.env
 KEYCLOAK_ADMIN=admin
 KEYCLOAK_ADMIN_PASSWORD=<contraseña-segura>
 ```
@@ -541,7 +457,7 @@ ${PUBLIC_SCHEME}://${PUBLIC_HOST}:${PUBLIC_PORT}${KEYCLOAK_RELATIVE_PATH}/admin/
 
 Para conceder permisos administrativos, asigna al usuario los roles correspondientes desde la sección **Role mapping** de Keycloak.
 
-#### MongoDB
+### MongoDB
 
 El usuario administrador inicial de MongoDB se configura en `.env`:
 
@@ -558,13 +474,24 @@ Para acceder a la consola administrativa:
 podman exec -it "${MONGO_CONTAINER}" \
   mongosh \
   -u "${MONGO_ROOT_USERNAME}" \
-  -p \
+  -p \  
   --authenticationDatabase "${MONGO_AUTH_SOURCE}"
 ```
 
 El parámetro `-p` solicita la contraseña de forma interactiva y evita incluirla directamente en el historial de la terminal.
 
-#### Mongo Express
+Para cambiar la contraseña para que coincida con `MONGO_ROOT_PASSWORD` definida en `.env`, ejecutar:
+
+```mongosh
+use admin
+db.changeUserPassword("root", passwordPrompt())
+```
+
+`passwordPrompt()` pide la nueva contraseña de forma interactiva. Así no queda escrita en el historial de `mongosh`, que se guarda dentro del contenedor. 
+
+El cambio se aplica automáticamente sin reiniciar el contenedor. 
+
+### Mongo Express
 
 Mongo Express no mantiene usuarios propios. Su acceso web utiliza autenticación básica configurada mediante variables de entorno.
 
@@ -581,11 +508,11 @@ curl -s -u "${MONGO_EXPRESS_USERNAME}:${MONGO_EXPRESS_PASSWORD}" \
   "${PUBLIC_SCHEME}://${PUBLIC_HOST}:${PUBLIC_PORT}/mongo-express/"
 ```
 
-No deben utilizarse las credenciales predeterminadas `admin:pass`. 
+No deben utilizarse las credenciales predeterminadas. 
 
-### 8. Comprobaciones posteriores
+## Comprobaciones posteriores
 
-#### Estado de los contenedores
+### Estado de los contenedores
 
 ```bash
 podman compose ps
@@ -593,7 +520,7 @@ podman compose ps
 
 Ningún contenedor debe permanecer en estado `Restarting` o `Exited`.
 
-#### Comprobar que todos los endpoints funcionan
+### Comprobar que todos los endpoints funcionan
 
 Desde la raíz del repositorio, ejecuta:
 
@@ -604,7 +531,16 @@ chmod +x deploy/check_endpoints.sh
 
 El script comprueba el acceso a Template UI, Beacon API, Keycloak, Admin UI y Mongo Express. Todos los endpoints deben devolver OK.
 
-#### Template UI
+```text
+  OK    Template UI              HTTP 200
+  OK    Beacon API (main host)   HTTP 200
+  OK    Beacon API (API host)    HTTP 200
+  OK    Keycloak                 HTTP 200
+  OK    Admin UI                 HTTP 302
+  OK    Mongo Express            HTTP 200
+```
+
+### Template UI
 
 ```bash
 curl -s -o /dev/null -w "HTTP %{http_code}\n" \
@@ -617,7 +553,7 @@ Resultado esperado:
 HTTP 200
 ```
 
-#### Beacon API
+### Beacon API
 
 ```bash
 curl -s -o /dev/null -w "HTTP %{http_code}\n" \
@@ -637,7 +573,7 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" \
   http://beaconaf-isciiiciber.isciiides.es:8443/api/info
 ```
 
-#### Keycloak
+### Keycloak
 
 ```bash
 curl -s -o /dev/null -w "HTTP %{http_code}\n" \
@@ -650,7 +586,7 @@ Resultado esperado:
 HTTP 200
 ```
 
-#### Admin UI
+### Admin UI
 
 ```bash
 curl -s -o /dev/null -w "HTTP %{http_code}\n" \
@@ -667,7 +603,7 @@ si redirige al login.
 
 Comprueba también desde la interfaz que es posible guardar una configuración.
 
-#### Mongo Express
+### Mongo Express
 
 Sin autenticación:
 
@@ -688,7 +624,7 @@ Con las credenciales configuradas debe devolver:
 HTTP 200
 ```
 
-#### Migraciones de Admin UI
+### Migraciones de Admin UI
 
 Las migraciones se ejecutan automáticamente al arrancar.
 
@@ -701,7 +637,7 @@ podman exec admin-ui \
 
 No ejecutes `manage.py` desde el host salvo que exista un entorno Python local con Django y todas las dependencias.
 
-#### Datos de MongoDB
+### Datos de MongoDB
 
 Comprueba que MongoDB responde:
 
@@ -714,15 +650,13 @@ podman exec mongoprod \
   --eval 'db.adminCommand({ping: 1})'
 ```
 
-# Parte II. Operación y mantenimiento
-
 ## Rotación de logs de MongoDB
 
 MongoDB escribe su log dentro del contenedor `mongoprod` en `/var/log/mongodb/mongod.log` (definido en `beacon/connections/mongo/mongod.conf`). Ese fichero está montado como bind mount, por lo que en el host corresponde a:
 
 ```text
-${APP_LOG_DIR}/mongo/mongod.log
-# p. ej. /var/log/local/beacon/apps/mongo/mongod.log
+${APP_LOG_DIR}/mongodb/mongod.log
+# p. ej. /var/log/local/beacon/apps/mongodb/mongod.log
 ```
 
 Sin rotación, `mongod.log` crece de forma indefinida y puede llegar a llenar la partición `/var/log`. La rotación se gestiona con `logrotate` ejecutado por `systemd --user`, sin privilegios de administrador, en coherencia con el despliegue rootless.

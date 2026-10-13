@@ -22,7 +22,7 @@ services:
       database_certificate: ""
       database_cafile: ""
     volumes:
-      - ${APP_LOG_DIR}/beacon.log:/beacon/logs/beacon.log
+      - ${APP_LOG_DIR}/beacon/beacon.log:/beacon/logs/beacon.log
       - ${APP_ROOT}/beacon/conf/conf.py:/beacon/conf/conf.py
       - ${APP_ROOT}/beacon/connections/mongo/conf.py:/beacon/connections/mongo/conf.py
       - ${APP_ROOT}/beacon/permissions:/beacon/permissions
@@ -121,7 +121,7 @@ services:
       - ${BIND_ROOT}/runtime/mongo/configdb:/data/configdb
       - ${BIND_ROOT}/runtime/mongo/caseLevelData:/data/caseLevelData
       - ${APP_ROOT}/beacon/connections/mongo/mongod.conf:/etc/mongod.conf:ro
-      - ${APP_LOG_DIR}/mongo/mongod.log:/var/log/mongodb/mongod.log
+      - ${APP_LOG_DIR}/mongodb/mongod.log:/var/log/mongodb/mongod.log
       #- ./test-server1.pem:/test-server1.pem
       #- ./test-ca.pem:/test-ca.pem
       #- ./test-client.pem:/test-client.pem

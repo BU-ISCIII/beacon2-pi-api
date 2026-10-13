@@ -127,7 +127,7 @@ if want db; then
         "${MONGO_ROOT}/caseLevelData" \
         "${APP_LOG_DIR}/mongo"
 
-    podman unshare touch "${APP_LOG_DIR}/mongo/mongod.log"
+    podman unshare touch "${APP_LOG_DIR}/mongodb/mongod.log"
 fi
 
 if want idp-db; then
@@ -145,7 +145,7 @@ if want beaconprod; then
         "${CERTS_DIR}" \
         "${APP_LOG_DIR}"
 
-    podman unshare touch "${APP_LOG_DIR}/beacon.log"
+    podman unshare touch "${APP_LOG_DIR}/beacon/beacon.log"
 fi
 
 if want apache-beacon; then
@@ -221,19 +221,19 @@ echo "Ajustando logs..."
 if want beaconprod; then
     podman unshare chown \
         "${BEACON_UID}:${BEACON_GID}" \
-        "${APP_LOG_DIR}/beacon.log"
+        "${APP_LOG_DIR}/beacon/beacon.log"
 
     podman unshare chmod 0644 \
-        "${APP_LOG_DIR}/beacon.log"
+        "${APP_LOG_DIR}/beacon/beacon.log"
 fi
 
 if want db; then
     podman unshare chown \
         "${MONGO_UID}:${MONGO_GID}" \
-        "${APP_LOG_DIR}/mongo/mongod.log"
+        "${APP_LOG_DIR}/mongodb/mongod.log"
 
     podman unshare chmod 0644 \
-        "${APP_LOG_DIR}/mongo/mongod.log"
+        "${APP_LOG_DIR}/mongodb/mongod.log"
 fi
 
 if want idp-db; then
@@ -297,7 +297,7 @@ if command -v getenforce >/dev/null 2>&1 &&
         want db && selinux_paths+=(
             "${APP_ROOT}/beacon/connections/mongo"
             "${MONGO_ROOT}"
-            "${APP_LOG_DIR}/mongo/mongod.log"
+            "${APP_LOG_DIR}/mongodb/mongod.log"
         )
 
         want idp-db && selinux_paths+=(
@@ -313,7 +313,7 @@ if command -v getenforce >/dev/null 2>&1 &&
 
         want beaconprod && selinux_paths+=(
             "${APP_ROOT}/beacon"
-            "${APP_LOG_DIR}/beacon.log"
+            "${APP_LOG_DIR}/beacon/beacon.log"
             "${CERTS_DIR}"
         )
 
@@ -359,8 +359,8 @@ if [[ "${SERVICE}" == "all" ]]; then
         "${POSTGRES_DATA}"
         "${ADMIN_UI_DATA}"
         "${ADMIN_UI_DATA}/db.sqlite3"
-        "${APP_LOG_DIR}/beacon.log"
-        "${APP_LOG_DIR}/mongo/mongod.log"
+        "${APP_LOG_DIR}/beacon/beacon.log"
+        "${APP_LOG_DIR}/mongodb/mongod.log"
         "${APP_LOG_DIR}/postgres"
         "${APP_LOG_DIR}/apache"
         "${CERTS_DIR}/beacon_server.crt"
@@ -372,7 +372,7 @@ else
     want db && status_paths+=(
         "${MONGO_ROOT}/db"
         "${MONGO_ROOT}/configdb"
-        "${APP_LOG_DIR}/mongo/mongod.log"
+        "${APP_LOG_DIR}/mongodb/mongod.log"
     )
 
     want idp-db && status_paths+=(
@@ -386,7 +386,7 @@ else
     )
 
     want beaconprod && status_paths+=(
-        "${APP_LOG_DIR}/beacon.log"
+        "${APP_LOG_DIR}/beacon/beacon.log"
         "${CERTS_DIR}/beacon_server.crt"
         "${CERTS_DIR}/beacon_server.key"
     )
