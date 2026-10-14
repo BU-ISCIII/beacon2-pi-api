@@ -108,7 +108,8 @@ Los logs se almacenan en:
 
 ```text
 ${APP_LOG_DIR}/
-├── beacon.log
+├── beacon/
+│   └── beacon.log      # la API lo rota a medianoche y conserva 7 ficheros
 ├── mongo/
 │   └── mongod.log
 ├── postgres/
@@ -244,12 +245,7 @@ uri = 'http://beaconprod:5050'
 
 Esto es obligatorio: aiohttp construye `request.url` a partir de la conexión TCP y la compara con `config.uri`. Si ambos no coinciden, la API rechaza las peticiones.
 
-Los ficheros siguientes se siguen montando por compatibilidad, pero actualmente no se utilizan:
-
-```text
-${BIND_ROOT}/etc/certs/beacon_server.crt
-${BIND_ROOT}/etc/certs/beacon_server.key
-```
+Por eso `beaconprod` ya no monta `${BIND_ROOT}/etc/certs/beacon_server.crt` ni `beacon_server.key`.
 
 **Pendiente:** certificados institucionales y terminación TLS en Apache para acceso exterior.
 
