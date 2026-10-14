@@ -9,7 +9,7 @@ except Exception as e:
     raise FileNotFound('There are issues with the api_version.yml file. Check if it can be opened or if has any content')
 
 level=logging.DEBUG
-log_file = '/beacon/logs/beacon.log'
+log_file = '/beacon/logs/log_files/beacon.log'
 beacon_id = 'es.isciii-ciber.beacon'
 beacon_name = 'ISCIII-CIBER Spain AF Beacon'
 api_version = 'v2.2.0' # Version of the Beacon implementation

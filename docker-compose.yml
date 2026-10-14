@@ -22,16 +22,15 @@ services:
       database_certificate: ""
       database_cafile: ""
     volumes:
-      - ${APP_LOG_DIR}/beacon/beacon.log:/beacon/logs/beacon.log
+      - ${APP_LOG_DIR}/beacon:/beacon/logs/log_files
       - ${APP_ROOT}/beacon/conf/conf.py:/beacon/conf/conf.py
+      - ${APP_ROOT}/beacon/conf/conf_default.py:/beacon/conf/conf_default.py
       - ${APP_ROOT}/beacon/connections/mongo/conf.py:/beacon/connections/mongo/conf.py
       - ${APP_ROOT}/beacon/permissions:/beacon/permissions
       - ${APP_ROOT}/beacon/conf/datasets:/beacon/conf/datasets
       - ${APP_ROOT}/beacon/auth/idp_providers:/beacon/auth/idp_providers
       - ${APP_ROOT}/beacon/models:/beacon/models
       - ${APP_ROOT}/beacon/conf/models:/beacon/conf/models
-      - ${BIND_ROOT}/etc/certs/beacon_server.crt:/etc/beacon/certs/beacon_server.crt:ro
-      - ${BIND_ROOT}/etc/certs/beacon_server.key:/etc/beacon/certs/beacon_server.key:ro
     networks:
       - pub
 
@@ -165,7 +164,6 @@ services:
       - "${TEMPLATE_UI_PORT}:3000"
     volumes:
       - ${APP_ROOT}/template-ui/src/config/config.json:/client/src/config/config.json:ro
-      - ${APP_ROOT}/template-ui/.env:/client/.env:ro
     networks:
       - pub
     environment:
