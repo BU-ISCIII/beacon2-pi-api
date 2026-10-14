@@ -77,7 +77,7 @@ class MongoPermissions(Permissions):
     async def initialize(self):
         pass
 
-    async def get_permissions(self, username, requested_datasets=None, testMode=False):
+    async def get_permissions(self, username, requested_datasets=None, testMode=False, entry_type_id=None):
         datasets = []
         try:
             datasets_permissions = {
@@ -99,7 +99,7 @@ class MongoPermissions(Permissions):
                 granularity_exceptions = None
                 default_granularity, granularity_exceptions = return_granularity_and_exceptions(self, security_level_dict, username, default_granularity, granularity_exceptions)
                 if granularity_exceptions != None:
-                    default_granularity = return_found_granularity_in_exceptions(self, granularity_exceptions, default_granularity)
+                    default_granularity = return_found_granularity_in_exceptions(self, granularity_exceptions, default_granularity, entry_type_id)
                 if default_granularity != None:
                     datasetInstance = SingleDatasetResponse(dataset=dataset, granularity=default_granularity)
                     datasets.append(datasetInstance)
