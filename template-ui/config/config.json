@@ -94,14 +94,11 @@
     "auth": {
       "oidc": {
         "clientId": "beacon-ui",
-        "authority": "http://beaconaf-isciiiciber.isciiides.es:8443/auth/realms/Beacon",
         "redirectUri": "http://beaconaf-isciiiciber.isciiides.es:8443/",
         "autoSignIn": false,
         "automaticSilentRenew": true,
-        "scope": "openid profile email",
-        "revokeAccessTokenOnSignout": true
+        "scope": "openid profile email"
       }
-
     },
 
     "entryTypesOrder": [
