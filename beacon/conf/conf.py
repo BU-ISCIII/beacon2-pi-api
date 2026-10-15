@@ -9,13 +9,14 @@ except Exception as e:
     raise FileNotFound('There are issues with the api_version.yml file. Check if it can be opened or if has any content')
 
 level=logging.DEBUG
-log_file = '/beacon/logs/beacon.log'
+log_file = '/beacon/logs/log_files/beacon.log'
 beacon_id = 'es.isciii-ciber.beacon'
 beacon_name = 'ISCIII-CIBER Spain AF Beacon'
 api_version = 'v2.2.0' # Version of the Beacon implementation
 uri = 'http://beaconprod:5050'
 uri_subpath = '/api'
 complete_url = uri + uri_subpath
+allowed_uris = ['http://beaconaf-isciiiciber.isciiides.es:8443/api', 'http://apibeacon-isciiiciber.isciiides.es:8443/api'] # public hosts behind Apache (ProxyPreserveHost On)
 environment = 'TEST'
 description = r"This Beacon is based on synthetic data hosted at the <a href='https://ega-archive.org/datasets/EGAD00001003338'>EGA</a>. The dataset contains 2504 samples including genetic data based on 1K Genomes data, and 76 individual attributes and phenotypic data derived from UKBiobank."
 version = api_version_yaml['api_version']
@@ -42,7 +43,7 @@ org_description = 'El Instituto de Salud Carlos III es el principal organismo p√
 org_adress = 'C/ Monforte de Lemos, 5, 28029 Madrid, Spain'
 org_welcome_url = 'https://www.isciii.es/'
 org_contact_url = 'mailto:bioinformatica@isciii.es'
-org_logo_url = 'https://www.isciii.es/images/logo.png'
+org_logo_url = 'https://sirena.isciii.es/wp-content/uploads/2022/10/horizontal.jpg'
 org_info = ''
 
 # Certificates

@@ -108,7 +108,8 @@ Los logs se almacenan en:
 
 ```text
 ${APP_LOG_DIR}/
-├── beacon.log
+├── beacon/
+│   └── beacon.log      # la API lo rota a medianoche y conserva 7 ficheros
 ├── mongo/
 │   └── mongod.log
 ├── postgres/
@@ -236,20 +237,21 @@ En este despliegue **el tráfico interno entre contenedores va en claro**:
 - MongoDB no utiliza TLS. La sección `net.tls` de `mongod.conf` está comentada.
 - Apache habla con Beacon mediante `ProxyPass http://beaconprod:5050/api`.
 
-`beacon/conf/conf.py` debe declarar el `uri` con el mismo esquema:
+Por eso `beaconprod` ya no monta `${BIND_ROOT}/etc/certs/beacon_server.crt` ni `beacon_server.key`.
+
+### `uri` y `allowed_uris`
+
+La API compara la URL de cada petición con `uri` + `uri_subpath` de `beacon/conf/conf.py`. Apache usa `ProxyPreserveHost On`, así que la API recibe las peticiones con el nombre público (`beaconaf-isciiiciber.isciiides.es:8443` o `apibeacon-isciiiciber.isciiides.es:8443`), no con `beaconprod:5050`.
+
+Desde la v2.3.x, si la URL no coincide con `uri`, la API solo la acepta si está en `allowed_uris`; si no, responde **HTTP 400** (antes solo dejaba un warning en el log). Por eso `conf.py` debe tener las dos URLs públicas, con el `/api` final:
 
 ```python
 uri = 'http://beaconprod:5050'
+uri_subpath = '/api'
+allowed_uris = ['http://beaconaf-isciiiciber.isciiides.es:8443/api', 'http://apibeacon-isciiiciber.isciiides.es:8443/api']
 ```
 
-Esto es obligatorio: aiohttp construye `request.url` a partir de la conexión TCP y la compara con `config.uri`. Si ambos no coinciden, la API rechaza las peticiones.
-
-Los ficheros siguientes se siguen montando por compatibilidad, pero actualmente no se utilizan:
-
-```text
-${BIND_ROOT}/etc/certs/beacon_server.crt
-${BIND_ROOT}/etc/certs/beacon_server.key
-```
+- Si se añade otro nombre público o se pasa a HTTPS, hay que añadirlo aquí con el esquema y el puerto exactos.
 
 **Pendiente:** certificados institucionales y terminación TLS en Apache para acceso exterior.
 
@@ -292,17 +294,6 @@ beacon/models/ga4gh/beacon_v2_default_model/conf/entry_types/
 
 El ownership del código se mantiene en el usuario del host. El acceso del UID interno de Admin UI se concede mediante ACL.
 
-**Importante:** las ACL se pierden al reemplazar un fichero. `sed -i`, `git checkout`, `git switch` y la mayoría de editores no modifican el fichero en su sitio: escriben uno nuevo y lo renombran encima, y la ACL se va con el original. Tras editar a mano cualquiera de las rutas anteriores, reejecuta el script o restaura la ACL del fichero concreto:
-
-```bash
-set -a
-source .env
-set +a
-
-podman unshare setfacl -m "u:${ADMIN_UI_UID}:rw" \
-  "${APP_ROOT}/beacon/conf/conf.py"
-```
-
 Ejecuta, con el stack bajado (`podman compose down`):
 
 ```bash
@@ -317,6 +308,17 @@ chmod +x deploy/fix_permissions.sh
 El script se detendrá si detecta algún contenedor del stack activo.
 
 Al finalizar muestra los modos y propietarios efectivos de las rutas principales.
+
+**Importante:** las ACL se pierden al reemplazar un fichero. `sed -i`, `git checkout`, `git switch` y la mayoría de editores no modifican el fichero en su sitio: escriben uno nuevo y lo renombran encima, y la ACL se va con el original. Tras editar a mano cualquiera de las rutas anteriores, reejecuta el script o restaura la ACL del fichero concreto:
+
+```bash
+set -a
+source .env
+set +a
+
+podman unshare setfacl -m "u:${ADMIN_UI_UID}:rw" \
+  "${APP_ROOT}/beacon/conf/conf.py"
+```
 
 ## Construir y arrancar el stack
 
@@ -487,9 +489,9 @@ use admin
 db.changeUserPassword("root", passwordPrompt())
 ```
 
-`passwordPrompt()` pide la nueva contraseña de forma interactiva. Así no queda escrita en el historial de `mongosh`, que se guarda dentro del contenedor. 
+`passwordPrompt()` pide la nueva contraseña de forma interactiva. Así no queda escrita en el historial de `mongosh`, que se guarda dentro del contenedor.
 
-El cambio se aplica automáticamente sin reiniciar el contenedor. 
+El cambio se aplica automáticamente sin reiniciar el contenedor.
 
 ### Mongo Express
 
@@ -508,7 +510,7 @@ curl -s -u "${MONGO_EXPRESS_USERNAME}:${MONGO_EXPRESS_PASSWORD}" \
   "${PUBLIC_SCHEME}://${PUBLIC_HOST}:${PUBLIC_PORT}/mongo-express/"
 ```
 
-No deben utilizarse las credenciales predeterminadas. 
+No deben utilizarse las credenciales predeterminadas.
 
 ## Comprobaciones posteriores
 
@@ -1080,6 +1082,7 @@ Servicios admitidos:
 - `template-ui`
 
 Para reparar todo el despliegue:
+
 ```bash
 podman compose down
 ./deploy/fix_permissions.sh

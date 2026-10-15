@@ -141,11 +141,9 @@ if want admin-ui; then
 fi
 
 if want beaconprod; then
-    mkdir -p \
-        "${CERTS_DIR}" \
-        "${APP_LOG_DIR}"
-
-    podman unshare touch "${APP_LOG_DIR}/beacon/beacon.log"
+    # La API rota su propio log (log_rotating_interval en conf_default.py),
+    # por eso necesita el directorio completo, no un fichero montado.
+    mkdir -p "${APP_LOG_DIR}/beacon"
 fi
 
 if want apache-beacon; then
@@ -219,12 +217,14 @@ fi
 echo "Ajustando logs..."
 
 if want beaconprod; then
-    podman unshare chown \
+    # El directorio debe ser del usuario de beacon para crear y renombrar
+    # los ficheros rotados (beacon.log, beacon.log.YYYY-MM-DD, ...).
+    podman unshare chown -R \
         "${BEACON_UID}:${BEACON_GID}" \
-        "${APP_LOG_DIR}/beacon/beacon.log"
+        "${APP_LOG_DIR}/beacon"
 
-    podman unshare chmod 0644 \
-        "${APP_LOG_DIR}/beacon/beacon.log"
+    podman unshare chmod 0755 \
+        "${APP_LOG_DIR}/beacon"
 fi
 
 if want db; then
@@ -313,7 +313,7 @@ if command -v getenforce >/dev/null 2>&1 &&
 
         want beaconprod && selinux_paths+=(
             "${APP_ROOT}/beacon"
-            "${APP_LOG_DIR}/beacon/beacon.log"
+            "${APP_LOG_DIR}/beacon"
             "${CERTS_DIR}"
         )
 
@@ -359,7 +359,7 @@ if [[ "${SERVICE}" == "all" ]]; then
         "${POSTGRES_DATA}"
         "${ADMIN_UI_DATA}"
         "${ADMIN_UI_DATA}/db.sqlite3"
-        "${APP_LOG_DIR}/beacon/beacon.log"
+        "${APP_LOG_DIR}/beacon"
         "${APP_LOG_DIR}/mongodb/mongod.log"
         "${APP_LOG_DIR}/postgres"
         "${APP_LOG_DIR}/apache"
@@ -386,7 +386,7 @@ else
     )
 
     want beaconprod && status_paths+=(
-        "${APP_LOG_DIR}/beacon/beacon.log"
+        "${APP_LOG_DIR}/beacon"
         "${CERTS_DIR}/beacon_server.crt"
         "${CERTS_DIR}/beacon_server.key"
     )

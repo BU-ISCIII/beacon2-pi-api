@@ -14,6 +14,9 @@ adminui/adminclient/migrations/*
 adminui/node_modules
 *.vcf.bgz
 beacon/conf/conf.py
+beacon/models/prova
+*.msgpack
+*.initialized
 # Local certificates and persistent container data
 certs/
 beacon/connections/mongo/data/db/
