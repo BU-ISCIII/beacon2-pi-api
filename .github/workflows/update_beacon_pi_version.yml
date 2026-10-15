@@ -15,7 +15,6 @@ permissions:
 
 jobs:
   update-version:
-    if: github.repository == 'EGA-archive/beacon2-pi-api'
     runs-on: ubuntu-latest
 
     steps:
